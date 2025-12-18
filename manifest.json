@@ -3,28 +3,14 @@
   "name": "JSON Formatter",
   "version": "1.0",
   "description": "Make JSON more readable.",
-  "permissions": [
-    "webRequest",
-    "scripting",
-    "tabs"
-  ],
   "host_permissions": [
     "<all_urls>"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["prism.min.css", "prism.min.js", "prism-json.min.js"],
-      "matches": ["<all_urls>"]
     }
   ],
   "content_security_policy": {

@@ -1,264 +1,568 @@
 // content.js
 console.log('JSON Formatter Content Script Loaded...');
 
-// 保存已处理的URL，避免重复处理
-let processedUrls = new Set();
-// 标记是否已经处理过页面的第一个请求
-let initialRequestProcessed = false;
+const MAX_JSON_CHARS = 10 * 1024 * 1024; // 10MB (按字符粗略限制，避免极大 JSON 卡死)
 
-// 检查是否在顶级窗口（标签页）中运行，而不是在iframe中
-if (window.self !== window.top) {
-    console.log('在iframe中检测到JSON格式化扩展，跳过处理');
-    // 在iframe中不执行任何操作
-} else {
-    // 主要逻辑只在标签页中运行
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === "processPageForJSON") {
-            console.log('收到processPageForJSON消息，内容类型:', request.contentType);
-            console.log('URL:', request.url);
-            
-            // 如果已经处理过任何请求，则跳过所有后续请求
-            if (initialRequestProcessed) {
-                console.log('已处理过初始请求，跳过所有后续请求');
-                if (sendResponse) sendResponse({status: "skipped"});
-                return true;
-            }
-            
-            // 避免重复处理同一个URL
-            if (processedUrls.has(request.url)) {
-                console.log('URL已处理过，跳过:', request.url);
-                if (sendResponse) sendResponse({status: "skipped"});
-                return true;
-            }
-            
-            // 标记已处理初始请求
-            initialRequestProcessed = true;
-            processedUrls.add(request.url);
-            
-            // 等待很短时间再处理，确保DOM完全加载
-            setTimeout(() => {
-                processPageContent(request.contentType, request.url);
-            }, 50);
-            
-            if (sendResponse) sendResponse({status: "processed"});
-        }
-        return true; // 保持消息通道开放，用于异步sendResponse
-    });
-
-    // 直接在页面加载时尝试处理，不只依赖background.js的消息
-    document.addEventListener('DOMContentLoaded', () => {
-        // 如果已经处理过请求，就不再处理
-        if (!initialRequestProcessed) {
-            // 检查页面内容是否为JSON格式
-            tryProcessBasedOnContent();
-        }
-    });
-
-    // 处理已经加载的页面
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        // 如果已经处理过请求，就不再处理
-        if (!initialRequestProcessed) {
-            tryProcessBasedOnContent();
-        }
-    }
+function isJsonContentType(contentType) {
+    if (!contentType) return false;
+    const lower = contentType.toLowerCase();
+    return lower.includes('application/json') || lower.includes('text/json') || lower.includes('+json');
 }
 
-// 尝试基于页面内容检测并处理JSON
-function tryProcessBasedOnContent() {
-    // 首先检查Content-Type
-    const contentType = document.contentType;
-    const contentTypeIsJson = contentType && contentType.toLowerCase().includes('application/json');
-    
-    // 如果Content-Type是JSON类型，直接处理
-    if (contentTypeIsJson) {
-        initialRequestProcessed = true;
-        setTimeout(() => {
-            processPageContent(contentType, window.location.href);
-        }, 100);
+function getMeaningfulBodyChildren(body) {
+    return Array.from(body.childNodes).filter(node => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return node.textContent.trim().length > 0;
+        }
         return true;
-    }
-    
-    // 获取页面内容
-    let pageContent = "";
-    if (document.body) {
-        if (document.body.firstChild && 
-            document.body.firstChild.nodeType === Node.ELEMENT_NODE && 
-            document.body.firstChild.tagName === 'PRE') {
-            pageContent = document.body.firstChild.textContent;
-        } else {
-            pageContent = document.body.textContent;
-        }
-    }
-    pageContent = pageContent.trim();
-    
-    // 检查长度是否小于5000
-    if (pageContent.length > 0 && pageContent.length < 5000) {
-        // 尝试直接JSON.parse
-        try {
-            JSON.parse(pageContent);
-            // 如果能成功解析，则认为是JSON
-            initialRequestProcessed = true;
-            setTimeout(() => {
-                processPageContent(contentType || 'text/plain', window.location.href);
-            }, 100);
-            return true;
-        } catch (e) {
-            // 解析失败，不是JSON
-            console.log('内容不是有效的JSON:', e.message);
-        }
-    }
-    
-    return false;
+    });
 }
 
-function processPageContent(mainContentType, url = '') {
-    let pageTextContent = "";
-    let isLikelyRawJsonPage = false;
+function getRawJsonTextCandidate() {
+    if (!document.body) return null;
 
-    // 检查内容类型是否为JSON
-    if (mainContentType && mainContentType.toLowerCase().includes('application/json')) {
-        isLikelyRawJsonPage = true;
-    }
+    const bodyChildren = getMeaningfulBodyChildren(document.body);
+    const contentTypeIsJson = isJsonContentType(document.contentType);
 
-    // 检查页面全部内容
-    if (document.body) {
-        // 如果是原始JSON页面，浏览器通常将其包装在单个PRE标签中
-        if (document.body.firstChild && 
-            document.body.firstChild.nodeType === Node.ELEMENT_NODE && 
-            document.body.firstChild.tagName === 'PRE') {
-            pageTextContent = document.body.firstChild.textContent;
-        } else {
-            // 对于其他情况（包括我们可能尝试完全解析的HTML页面）
-            pageTextContent = document.body.textContent;
+    // Chrome 打开 raw JSON 往往是单个 <pre>
+    if (bodyChildren.length === 1) {
+        const only = bodyChildren[0];
+        if (only.nodeType === Node.ELEMENT_NODE && only.tagName === 'PRE') {
+            return only.textContent;
         }
     }
-    pageTextContent = pageTextContent.trim();
 
-    // 检查页面内容是否看起来像JSON（不仅基于内容类型）
-    const looksLikeJson = (pageTextContent.startsWith('{') && pageTextContent.endsWith('}')) || 
-                         (pageTextContent.startsWith('[') && pageTextContent.endsWith(']'));
-    
-    // 如果看起来不像JSON，就不继续处理
-    if (!looksLikeJson && !isLikelyRawJsonPage) {
+    // 仅在明确是 JSON Content-Type 时才用 body.textContent，避免误判 HTML 页面
+    if (contentTypeIsJson) {
+        return document.body.textContent;
+    }
+
+    return null;
+}
+
+function tryParseJson(text) {
+    if (typeof text !== 'string') return {ok: false};
+    const trimmed = text.replace(/^\uFEFF/, '').trim();
+    if (trimmed.length === 0) return {ok: false};
+    if (trimmed.length > MAX_JSON_CHARS) return {ok: false, tooLarge: true, length: trimmed.length};
+
+    const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'));
+    if (!looksLikeJson) return {ok: false};
+
+    try {
+        return {ok: true, value: JSON.parse(trimmed), raw: trimmed};
+    } catch (error) {
+        return {ok: false, error};
+    }
+}
+
+function setProcessedMarker() {
+    try {
+        document.documentElement.dataset.jsonFormatterProcessed = '1';
+    } catch (_) {
+        // ignore
+    }
+}
+
+function alreadyProcessed() {
+    try {
+        return document.documentElement.dataset.jsonFormatterProcessed === '1';
+    } catch (_) {
+        return false;
+    }
+}
+
+function clearBody() {
+    if (!document.body) return;
+    while (document.body.firstChild) {
+        document.body.removeChild(document.body.firstChild);
+    }
+}
+
+function applyShadowStyles(shadowRoot, cssText) {
+    const canUseAdopted = typeof CSSStyleSheet !== 'undefined' &&
+        'adoptedStyleSheets' in shadowRoot &&
+        typeof CSSStyleSheet.prototype.replaceSync === 'function';
+
+    if (canUseAdopted) {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(cssText);
+        shadowRoot.adoptedStyleSheets = [sheet];
         return;
     }
 
-    // 尝试解析JSON
-    try {
-        const jsonObj = JSON.parse(pageTextContent);
-        const formatted = JSON.stringify(jsonObj, null, 2);
-        
-        // 清空文档并创建新的HTML结构
-        document.open();
-        document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>${document.title}</title>
-            <link rel="stylesheet" href="${chrome.runtime.getURL('prism.min.css')}">
-            <style>
-                body {
-                    margin: 0;
-                    padding: 0;
-                    font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
-                    background-color: #f8f8f8;
-                }
-                .json-container {
-                    padding: 20px;
-                    margin: 0 auto;
-                    max-width: 98%;
-                }
-                pre {
-                    white-space: pre-wrap;
-                    word-break: break-word;
-                    background-color: white;
-                    padding: 15px;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                    line-height: 1.5;
-                    margin: 0;
-                    counter-reset: line;
-                }
-                code {
-                    font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
-                }
-                /* 高亮样式 */
-                .string { color: #0b7522; }
-                .number { color: #0000ff; }
-                .boolean { color: #bc00bc; }
-                .null { color: #bc00bc; }
-                .key { color: #a52a2a; }
-                
-                /* 行号样式 */
-                .line-numbers-rows {
-                    position: absolute;
-                    pointer-events: none;
-                    top: 15px;
-                    left: 0;
-                    width: 3em;
-                    letter-spacing: -1px;
-                    border-right: 1px solid #999;
-                    user-select: none;
-                }
-                
-                .line-numbers-rows > span {
-                    display: block;
-                    counter-increment: line;
-                    pointer-events: none;
-                }
-                
-                .line-numbers-rows > span:before {
-                    content: counter(line);
-                    color: #999;
-                    display: block;
-                    padding-right: 0.8em;
-                    text-align: right;
-                }
-                
-                pre.line-numbers {
-                    position: relative;
-                    padding-left: 3.8em;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="json-container">
-                <pre class="line-numbers"><code class="language-json">${formatted}</code></pre>
-            </div>
-            <script src="${chrome.runtime.getURL('prism.min.js')}"></script>
-            <script src="${chrome.runtime.getURL('prism-json.min.js')}"></script>
-            <script>
-                // 生成行号
-                function addLineNumbers() {
-                    const pre = document.querySelector('pre.line-numbers');
-                    const code = pre.querySelector('code');
-                    const linesCount = (code.textContent.match(/\\n/g) || []).length + 1;
-                    
-                    const lineNumbersWrapper = document.createElement('span');
-                    lineNumbersWrapper.className = 'line-numbers-rows';
-                    
-                    let lineNumbersHTML = '';
-                    for (let i = 0; i < linesCount; i++) {
-                        lineNumbersHTML += '<span></span>';
-                    }
-                    
-                    lineNumbersWrapper.innerHTML = lineNumbersHTML;
-                    pre.appendChild(lineNumbersWrapper);
-                }
-                
-                // 等待DOM加载完成后添加行号
-                document.addEventListener('DOMContentLoaded', addLineNumbers);
-                // 如果DOM已经加载完成，直接添加行号
-                if (document.readyState === 'complete' || document.readyState === 'interactive') {
-                    addLineNumbers();
-                }
-            </script>
-        </body>
-        </html>
-        `);
-        document.close();
-    } catch (error) {
-        console.warn(`解析JSON失败: ${error.message}`);
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    shadowRoot.appendChild(style);
+}
+
+function formatByteLike(count) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = count;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex++;
     }
+    const fixed = unitIndex === 0 ? String(Math.round(value)) : value.toFixed(1);
+    return `${fixed} ${units[unitIndex]}`;
+}
+
+function renderErrorPage(message) {
+    clearBody();
+    setProcessedMarker();
+
+    const host = document.createElement('div');
+    host.id = '__json_formatter_root__';
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({mode: 'open'});
+    applyShadowStyles(shadow, `
+        :host, * { box-sizing: border-box; }
+        .wrap { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 24px; }
+        .card { max-width: 900px; margin: 0 auto; padding: 16px 18px; background: #fff; border: 1px solid #eee; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+        .title { font-weight: 600; margin: 0 0 6px; }
+        .msg { margin: 0; color: #444; line-height: 1.5; }
+    `);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'wrap';
+    shadow.appendChild(wrap);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    wrap.appendChild(card);
+
+    const title = document.createElement('p');
+    title.className = 'title';
+    title.textContent = 'JSON Formatter';
+    card.appendChild(title);
+
+    const msg = document.createElement('p');
+    msg.className = 'msg';
+    msg.textContent = message;
+    card.appendChild(msg);
+}
+
+function renderJsonPage(jsonValue) {
+    clearBody();
+    setProcessedMarker();
+
+    const host = document.createElement('div');
+    host.id = '__json_formatter_root__';
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({mode: 'open'});
+    applyShadowStyles(shadow, `
+        :host, * { box-sizing: border-box; }
+        .page { font-family: 'Monaco', 'SF Mono', 'Consolas', monospace; background: #f8f8f8; min-height: 100vh; }
+        .controls {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        }
+        .controls button {
+            margin: 0 6px 6px 0;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            background: #f8f8f8;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .controls button:hover { background: #ededed; }
+        .container { padding: 18px; margin: 0 auto; max-width: 98%; }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #fff;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            line-height: 1.55;
+            margin: 0;
+        }
+        code { font-family: inherit; }
+
+        /* 语法高亮（简单 token 样式，避免依赖第三方脚本） */
+        .string { color: #0b7522; }
+        .number { color: #0000ff; }
+        .boolean { color: #bc00bc; }
+        .null { color: #bc00bc; }
+        .key { color: #a52a2a; }
+
+        /* 行号 */
+        .line-numbers-rows {
+            position: absolute;
+            pointer-events: none;
+            top: 14px;
+            left: 0;
+            width: 3em;
+            letter-spacing: -1px;
+            border-right: 1px solid #e0e0e0;
+            user-select: none;
+        }
+        .line-numbers-rows > span { display: block; counter-increment: line; }
+        .line-numbers-rows > span:before {
+            content: counter(line);
+            color: #9a9a9a;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+        pre.line-numbers { position: relative; padding-left: 3.8em; counter-reset: line; }
+
+        /* 折叠 */
+        .collapse-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 11px;
+            line-height: 14px;
+            background: #e9e9e9;
+            border: 1px solid #dadada;
+            border-radius: 4px;
+            color: #555;
+            font-weight: 700;
+        }
+        .collapse-toggle:hover { background: #dfdfdf; }
+        .collapse-toggle.collapsed { background: #d3d3d3; }
+        .json-content { display: inline; }
+        .json-content.collapsed { display: none; }
+        .json-placeholder { display: none; color: #8a8a8a; font-style: italic; }
+        .json-placeholder.show { display: inline; }
+    `);
+
+    const page = document.createElement('div');
+    page.className = 'page';
+    shadow.appendChild(page);
+
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+    page.appendChild(controls);
+
+    function addButton(label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        controls.appendChild(btn);
+        return btn;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'container';
+    page.appendChild(container);
+
+    const pre = document.createElement('pre');
+    pre.className = 'line-numbers json-collapsible';
+    container.appendChild(pre);
+
+    const code = document.createElement('code');
+    code.id = 'json-code';
+    pre.appendChild(code);
+
+    const toggleTargets = new WeakMap();
+    let lineNumbersScheduled = false;
+
+    function scheduleLineNumbersUpdate() {
+        if (lineNumbersScheduled) return;
+        lineNumbersScheduled = true;
+        requestAnimationFrame(() => {
+            lineNumbersScheduled = false;
+            updateLineNumbers();
+        });
+    }
+
+    function getVisibleText(node) {
+        let text = '';
+        for (const child of node.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                text += child.textContent;
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                const el = child;
+                if (el.classList.contains('json-content') && el.classList.contains('collapsed')) {
+                    continue;
+                }
+                if (el.classList.contains('json-placeholder')) {
+                    if (el.classList.contains('show')) {
+                        text += el.textContent;
+                    }
+                    continue;
+                }
+                text += getVisibleText(el);
+            }
+        }
+        return text;
+    }
+
+    function addLineNumbers() {
+        const visibleText = getVisibleText(code);
+        const linesCount = (visibleText.match(/\n/g) || []).length + 1;
+
+        const lineNumbersWrapper = document.createElement('span');
+        lineNumbersWrapper.className = 'line-numbers-rows';
+        for (let i = 0; i < linesCount; i++) {
+            lineNumbersWrapper.appendChild(document.createElement('span'));
+        }
+        pre.appendChild(lineNumbersWrapper);
+    }
+
+    function updateLineNumbers() {
+        const existing = pre.querySelector('.line-numbers-rows');
+        if (existing) existing.remove();
+        addLineNumbers();
+    }
+
+    function setCollapsed(toggle, content, placeholder, collapsed) {
+        if (collapsed) {
+            content.classList.add('collapsed');
+            placeholder.classList.add('show');
+            toggle.textContent = '+';
+            toggle.classList.add('collapsed');
+        } else {
+            content.classList.remove('collapsed');
+            placeholder.classList.remove('show');
+            toggle.textContent = '-';
+            toggle.classList.remove('collapsed');
+        }
+    }
+
+    function createTokenSpan(className, text) {
+        const span = document.createElement('span');
+        span.className = className;
+        span.textContent = text;
+        return span;
+    }
+
+    function newId(prefix) {
+        return `${prefix}${Math.random().toString(36).slice(2, 11)}`;
+    }
+
+    function renderValue(value, level) {
+        const fragment = document.createDocumentFragment();
+
+        if (value === null) {
+            fragment.appendChild(createTokenSpan('null', 'null'));
+            return fragment;
+        }
+        if (typeof value === 'string') {
+            fragment.appendChild(createTokenSpan('string', JSON.stringify(value)));
+            return fragment;
+        }
+        if (typeof value === 'number') {
+            fragment.appendChild(createTokenSpan('number', String(value)));
+            return fragment;
+        }
+        if (typeof value === 'boolean') {
+            fragment.appendChild(createTokenSpan('boolean', String(value)));
+            return fragment;
+        }
+
+        const indent = '  '.repeat(level);
+        const nextIndent = '  '.repeat(level + 1);
+
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                fragment.appendChild(document.createTextNode('[]'));
+                return fragment;
+            }
+
+            const toggle = document.createElement('span');
+            toggle.className = 'collapse-toggle';
+            toggle.textContent = '-';
+            toggle.dataset.level = String(level);
+
+            const content = document.createElement('span');
+            content.className = 'json-content';
+            content.id = newId('content_');
+
+            const placeholder = document.createElement('span');
+            placeholder.className = 'json-placeholder';
+            placeholder.id = newId('placeholder_');
+            placeholder.textContent = `... ${value.length} 项`;
+
+            toggleTargets.set(toggle, {content, placeholder});
+            toggle.addEventListener('click', () => {
+                const isCollapsed = content.classList.contains('collapsed');
+                setCollapsed(toggle, content, placeholder, !isCollapsed);
+                scheduleLineNumbersUpdate();
+            });
+
+            fragment.appendChild(document.createTextNode('[\n'));
+            fragment.appendChild(document.createTextNode(nextIndent));
+            fragment.appendChild(toggle);
+            fragment.appendChild(content);
+
+            for (let i = 0; i < value.length; i++) {
+                if (i > 0) {
+                    content.appendChild(document.createTextNode(',\n' + nextIndent + '  '));
+                }
+                content.appendChild(renderValue(value[i], level + 1));
+            }
+
+            fragment.appendChild(placeholder);
+            fragment.appendChild(document.createTextNode('\n' + indent + ']'));
+            return fragment;
+        }
+
+        if (typeof value === 'object') {
+            const keys = Object.keys(value);
+            if (keys.length === 0) {
+                fragment.appendChild(document.createTextNode('{}'));
+                return fragment;
+            }
+
+            const toggle = document.createElement('span');
+            toggle.className = 'collapse-toggle';
+            toggle.textContent = '-';
+            toggle.dataset.level = String(level);
+
+            const content = document.createElement('span');
+            content.className = 'json-content';
+            content.id = newId('content_');
+
+            const placeholder = document.createElement('span');
+            placeholder.className = 'json-placeholder';
+            placeholder.id = newId('placeholder_');
+            placeholder.textContent = `... ${keys.length} 属性`;
+
+            toggleTargets.set(toggle, {content, placeholder});
+            toggle.addEventListener('click', () => {
+                const isCollapsed = content.classList.contains('collapsed');
+                setCollapsed(toggle, content, placeholder, !isCollapsed);
+                scheduleLineNumbersUpdate();
+            });
+
+            fragment.appendChild(document.createTextNode('{\n'));
+            fragment.appendChild(document.createTextNode(nextIndent));
+            fragment.appendChild(toggle);
+            fragment.appendChild(content);
+
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                if (i > 0) {
+                    content.appendChild(document.createTextNode(',\n' + nextIndent + '  '));
+                }
+                content.appendChild(createTokenSpan('key', JSON.stringify(key)));
+                content.appendChild(document.createTextNode(': '));
+                content.appendChild(renderValue(value[key], level + 1));
+            }
+
+            fragment.appendChild(placeholder);
+            fragment.appendChild(document.createTextNode('\n' + indent + '}'));
+            return fragment;
+        }
+
+        fragment.appendChild(document.createTextNode(String(value)));
+        return fragment;
+    }
+
+    function expandAll() {
+        const toggles = shadow.querySelectorAll('.collapse-toggle');
+        toggles.forEach(toggle => {
+            const targets = toggleTargets.get(toggle);
+            if (!targets) return;
+            setCollapsed(toggle, targets.content, targets.placeholder, false);
+        });
+        scheduleLineNumbersUpdate();
+    }
+
+    function collapseAll() {
+        const toggles = shadow.querySelectorAll('.collapse-toggle');
+        toggles.forEach(toggle => {
+            const targets = toggleTargets.get(toggle);
+            if (!targets) return;
+            setCollapsed(toggle, targets.content, targets.placeholder, true);
+        });
+        scheduleLineNumbersUpdate();
+    }
+
+    function collapseLevel(targetLevel) {
+        expandAll();
+        const toggles = shadow.querySelectorAll('.collapse-toggle');
+        toggles.forEach(toggle => {
+            const level = parseInt(toggle.dataset.level || '0', 10);
+            if (level >= targetLevel) {
+                const targets = toggleTargets.get(toggle);
+                if (!targets) return;
+                setCollapsed(toggle, targets.content, targets.placeholder, true);
+            }
+        });
+        scheduleLineNumbersUpdate();
+    }
+
+    function copyPrettyJson() {
+        const text = JSON.stringify(jsonValue, null, 2);
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(text).catch(() => {
+                // ignore
+            });
+            return;
+        }
+
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+        } catch (_) {
+            // ignore
+        }
+    }
+
+    addButton('展开全部', expandAll);
+    addButton('折叠全部', collapseAll);
+    addButton('折叠1级', () => collapseLevel(1));
+    addButton('折叠2级', () => collapseLevel(2));
+    addButton('折叠3级', () => collapseLevel(3));
+    addButton('复制JSON', copyPrettyJson);
+
+    code.appendChild(renderValue(jsonValue, 0));
+    updateLineNumbers();
+}
+
+function tryFormatIfJsonPage() {
+    if (alreadyProcessed()) return;
+    if (window.self !== window.top) return;
+    if (!document.body) return;
+
+    const candidate = getRawJsonTextCandidate();
+    if (!candidate) return;
+
+    const parsed = tryParseJson(candidate);
+    if (parsed.tooLarge) {
+        renderErrorPage(`JSON 过大（约 ${formatByteLike(parsed.length)}），为避免卡顿已跳过格式化。`);
+        return;
+    }
+    if (!parsed.ok) return;
+
+    renderJsonPage(parsed.value);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryFormatIfJsonPage);
+} else {
+    tryFormatIfJsonPage();
 }

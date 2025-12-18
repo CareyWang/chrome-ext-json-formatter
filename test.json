@@ -1,0 +1,43 @@
+{
+  "name": "测试用户",
+  "age": 25,
+  "address": {
+    "country": "中国",
+    "city": "北京",
+    "details": {
+      "street": "长安街",
+      "number": 123,
+      "coordinates": {
+        "lat": 39.9042,
+        "lng": 116.4074
+      }
+    }
+  },
+  "hobbies": [
+    "阅读",
+    "编程",
+    "旅行"
+  ],
+  "skills": [
+    {
+      "name": "JavaScript",
+      "level": "高级",
+      "years": 5
+    },
+    {
+      "name": "Python",
+      "level": "中级",
+      "years": 3
+    }
+  ],
+  "projects": [
+    {
+      "title": "Chrome扩展开发",
+      "description": "开发了一个JSON格式化扩展",
+      "technologies": ["JavaScript", "HTML", "CSS"],
+      "status": "完成"
+    }
+  ],
+  "isActive": true,
+  "lastLogin": null
+}
