@@ -2,11 +2,35 @@
 console.log('JSON Formatter Content Script Loaded...');
 
 const MAX_JSON_CHARS = 10 * 1024 * 1024; // 10MB (按字符粗略限制，避免极大 JSON 卡死)
+const MAX_STRUCTURED_RENDER_CHARS = 800 * 1024; // 超过该大小默认用纯文本渲染，避免大量 DOM 构建卡顿
+
+const ROOT_ID = '__json_formatter_root__';
+const PRE_HIDE_STYLE_ID = '__json_formatter_pre_hide_style__';
+
+let formattingStarted = false;
 
 function isJsonContentType(contentType) {
     if (!contentType) return false;
     const lower = contentType.toLowerCase();
     return lower.includes('application/json') || lower.includes('text/json') || lower.includes('+json');
+}
+
+function ensurePreHideStyle() {
+    if (document.getElementById(PRE_HIDE_STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = PRE_HIDE_STYLE_ID;
+    style.textContent = `
+        html, body { background: #f8f8f8 !important; }
+        body > * { visibility: hidden !important; }
+        body > #${ROOT_ID} { visibility: visible !important; }
+    `;
+
+    (document.head || document.documentElement).appendChild(style);
+}
+
+function removePreHideStyle() {
+    const style = document.getElementById(PRE_HIDE_STYLE_ID);
+    if (style) style.remove();
 }
 
 function getMeaningfulBodyChildren(body) {
@@ -75,9 +99,7 @@ function alreadyProcessed() {
 
 function clearBody() {
     if (!document.body) return;
-    while (document.body.firstChild) {
-        document.body.removeChild(document.body.firstChild);
-    }
+    document.body.textContent = '';
 }
 
 function applyShadowStyles(shadowRoot, cssText) {
@@ -112,9 +134,10 @@ function formatByteLike(count) {
 function renderErrorPage(message) {
     clearBody();
     setProcessedMarker();
+    removePreHideStyle();
 
     const host = document.createElement('div');
-    host.id = '__json_formatter_root__';
+    host.id = ROOT_ID;
     document.body.appendChild(host);
 
     const shadow = host.attachShadow({mode: 'open'});
@@ -145,32 +168,129 @@ function renderErrorPage(message) {
     card.appendChild(msg);
 }
 
-function renderJsonPage(jsonValue) {
-    clearBody();
-    setProcessedMarker();
+function removeExistingHost() {
+    if (!document.body) return;
+    const existing = document.getElementById(ROOT_ID);
+    if (existing) existing.remove();
+}
+
+function renderLoadingPage(approxLength) {
+    if (!document.body) return;
+
+    removeExistingHost();
+    ensurePreHideStyle();
 
     const host = document.createElement('div');
-    host.id = '__json_formatter_root__';
+    host.id = ROOT_ID;
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({mode: 'open'});
+    applyShadowStyles(shadow, `
+        :host, * { box-sizing: border-box; }
+        .page { min-height: 100vh; background: #f8f8f8; display: flex; align-items: center; justify-content: center; }
+        .card {
+            width: min(520px, calc(100vw - 32px));
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            padding: 18px 18px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        }
+        .title { font-weight: 600; margin: 0 0 8px; }
+        .row { display: flex; align-items: center; gap: 10px; }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            border-top-color: #666;
+            animation: spin 1s linear infinite;
+            flex: 0 0 auto;
+        }
+        .text { margin: 0; color: #444; font-size: 13px; line-height: 1.5; }
+        .meta { margin: 8px 0 0; color: #777; font-size: 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    `);
+
+    const page = document.createElement('div');
+    page.className = 'page';
+    shadow.appendChild(page);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    page.appendChild(card);
+
+    const title = document.createElement('p');
+    title.className = 'title';
+    title.textContent = 'JSON Formatter';
+    card.appendChild(title);
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    card.appendChild(row);
+
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    row.appendChild(spinner);
+
+    const text = document.createElement('p');
+    text.className = 'text';
+    text.textContent = '正在格式化 JSON…';
+    row.appendChild(text);
+
+    if (typeof approxLength === 'number') {
+        const meta = document.createElement('p');
+        meta.className = 'meta';
+        meta.textContent = `大小：约 ${formatByteLike(approxLength)}`;
+        card.appendChild(meta);
+    }
+}
+
+function countNewlines(text) {
+    let count = 0;
+    let index = 0;
+    while (true) {
+        index = text.indexOf('\n', index);
+        if (index === -1) break;
+        count++;
+        index++;
+    }
+    return count;
+}
+
+function renderJsonPage(jsonValue, options = {}) {
+    clearBody();
+    setProcessedMarker();
+    removePreHideStyle();
+
+    const preferPlain = options.preferPlain === true;
+
+    const host = document.createElement('div');
+    host.id = ROOT_ID;
     document.body.appendChild(host);
 
     const shadow = host.attachShadow({mode: 'open'});
     applyShadowStyles(shadow, `
         :host, * { box-sizing: border-box; }
         .page { font-family: 'Monaco', 'SF Mono', 'Consolas', monospace; background: #f8f8f8; min-height: 100vh; }
-        .controls {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 1000;
+        .card {
             background: #fff;
-            padding: 10px;
             border-radius: 10px;
             border: 1px solid #eee;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+            padding: 10px 10px 10px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
         }
         .controls button {
-            margin: 0 6px 6px 0;
+            margin: 0;
             padding: 6px 10px;
             border: 1px solid #ddd;
             background: #f8f8f8;
@@ -183,13 +303,11 @@ function renderJsonPage(jsonValue) {
         pre {
             white-space: pre-wrap;
             word-break: break-word;
-            background: #fff;
+            background: transparent;
             padding: 14px;
-            border-radius: 10px;
-            border: 1px solid #eee;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
             line-height: 1.55;
             margin: 0;
+            border-top: 1px solid #eee;
         }
         code { font-family: inherit; }
 
@@ -251,16 +369,16 @@ function renderJsonPage(jsonValue) {
     page.className = 'page';
     shadow.appendChild(page);
 
-    const controls = document.createElement('div');
-    controls.className = 'controls';
-    page.appendChild(controls);
-
-    function addButton(label, onClick) {
+    function addButton(label, onClick, beforeNode) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = label;
         btn.addEventListener('click', onClick);
-        controls.appendChild(btn);
+        if (beforeNode) {
+            controls.insertBefore(btn, beforeNode);
+        } else {
+            controls.appendChild(btn);
+        }
         return btn;
     }
 
@@ -268,9 +386,17 @@ function renderJsonPage(jsonValue) {
     container.className = 'container';
     page.appendChild(container);
 
+    const card = document.createElement('div');
+    card.className = 'card';
+    container.appendChild(card);
+
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+    card.appendChild(controls);
+
     const pre = document.createElement('pre');
     pre.className = 'line-numbers json-collapsible';
-    container.appendChild(pre);
+    card.appendChild(pre);
 
     const code = document.createElement('code');
     code.id = 'json-code';
@@ -278,6 +404,7 @@ function renderJsonPage(jsonValue) {
 
     const toggleTargets = new WeakMap();
     let lineNumbersScheduled = false;
+    let plainTextForLineNumbers = null;
 
     function scheduleLineNumbersUpdate() {
         if (lineNumbersScheduled) return;
@@ -288,11 +415,11 @@ function renderJsonPage(jsonValue) {
         });
     }
 
-    function getVisibleText(node) {
-        let text = '';
+    function countVisibleNewlines(node) {
+        let newlineCount = 0;
         for (const child of node.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
-                text += child.textContent;
+                newlineCount += countNewlines(child.textContent || '');
             } else if (child.nodeType === Node.ELEMENT_NODE) {
                 const el = child;
                 if (el.classList.contains('json-content') && el.classList.contains('collapsed')) {
@@ -300,19 +427,20 @@ function renderJsonPage(jsonValue) {
                 }
                 if (el.classList.contains('json-placeholder')) {
                     if (el.classList.contains('show')) {
-                        text += el.textContent;
+                        newlineCount += countNewlines(el.textContent || '');
                     }
                     continue;
                 }
-                text += getVisibleText(el);
+                newlineCount += countVisibleNewlines(el);
             }
         }
-        return text;
+        return newlineCount;
     }
 
     function addLineNumbers() {
-        const visibleText = getVisibleText(code);
-        const linesCount = (visibleText.match(/\n/g) || []).length + 1;
+        const linesCount = plainTextForLineNumbers !== null
+            ? countNewlines(plainTextForLineNumbers) + 1
+            : countVisibleNewlines(code) + 1;
 
         const lineNumbersWrapper = document.createElement('span');
         lineNumbersWrapper.className = 'line-numbers-rows';
@@ -403,14 +531,14 @@ function renderJsonPage(jsonValue) {
                 scheduleLineNumbersUpdate();
             });
 
+            fragment.appendChild(toggle);
             fragment.appendChild(document.createTextNode('[\n'));
             fragment.appendChild(document.createTextNode(nextIndent));
-            fragment.appendChild(toggle);
             fragment.appendChild(content);
 
             for (let i = 0; i < value.length; i++) {
                 if (i > 0) {
-                    content.appendChild(document.createTextNode(',\n' + nextIndent + '  '));
+                    content.appendChild(document.createTextNode(',\n' + nextIndent));
                 }
                 content.appendChild(renderValue(value[i], level + 1));
             }
@@ -448,15 +576,15 @@ function renderJsonPage(jsonValue) {
                 scheduleLineNumbersUpdate();
             });
 
+            fragment.appendChild(toggle);
             fragment.appendChild(document.createTextNode('{\n'));
             fragment.appendChild(document.createTextNode(nextIndent));
-            fragment.appendChild(toggle);
             fragment.appendChild(content);
 
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
                 if (i > 0) {
-                    content.appendChild(document.createTextNode(',\n' + nextIndent + '  '));
+                    content.appendChild(document.createTextNode(',\n' + nextIndent));
                 }
                 content.appendChild(createTokenSpan('key', JSON.stringify(key)));
                 content.appendChild(document.createTextNode(': '));
@@ -532,33 +660,125 @@ function renderJsonPage(jsonValue) {
         }
     }
 
-    addButton('展开全部', expandAll);
-    addButton('折叠全部', collapseAll);
-    addButton('折叠1级', () => collapseLevel(1));
-    addButton('折叠2级', () => collapseLevel(2));
-    addButton('折叠3级', () => collapseLevel(3));
-    addButton('复制JSON', copyPrettyJson);
+    function addFoldButtons(beforeNode) {
+        addButton('展开全部', expandAll, beforeNode);
+        addButton('折叠全部', collapseAll, beforeNode);
+        addButton('折叠1级', () => collapseLevel(1), beforeNode);
+        addButton('折叠2级', () => collapseLevel(2), beforeNode);
+        addButton('折叠3级', () => collapseLevel(3), beforeNode);
+    }
 
-    code.appendChild(renderValue(jsonValue, 0));
-    updateLineNumbers();
+    const copyBtn = addButton('复制JSON', copyPrettyJson);
+
+    function renderPlainText() {
+        const text = JSON.stringify(jsonValue, null, 2);
+        plainTextForLineNumbers = text;
+        code.textContent = text;
+        updateLineNumbers();
+    }
+
+    function renderStructured() {
+        plainTextForLineNumbers = null;
+        code.textContent = '';
+        code.appendChild(renderValue(jsonValue, 0));
+        updateLineNumbers();
+    }
+
+    if (preferPlain) {
+        const btnEnable = addButton('启用折叠（较慢）', () => {
+            addFoldButtons(copyBtn);
+            renderStructured();
+            btnEnable.remove();
+        }, copyBtn);
+        renderPlainText();
+    } else {
+        addFoldButtons(copyBtn);
+        renderStructured();
+    }
 }
 
 function tryFormatIfJsonPage() {
     if (alreadyProcessed()) return;
+    if (formattingStarted) return;
     if (window.self !== window.top) return;
     if (!document.body) return;
 
     const candidate = getRawJsonTextCandidate();
     if (!candidate) return;
 
-    const parsed = tryParseJson(candidate);
-    if (parsed.tooLarge) {
-        renderErrorPage(`JSON 过大（约 ${formatByteLike(parsed.length)}），为避免卡顿已跳过格式化。`);
-        return;
-    }
-    if (!parsed.ok) return;
+    const trimmed = candidate.replace(/^\uFEFF/, '').trim();
+    const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'));
+    if (!looksLikeJson) return;
 
-    renderJsonPage(parsed.value);
+    formattingStarted = true;
+    ensurePreHideStyle();
+    renderLoadingPage(trimmed.length);
+
+    // 让浏览器先绘制 loading，再做 JSON.parse / 大量 DOM 构建
+    setTimeout(() => {
+        const parsed = tryParseJson(candidate);
+        if (parsed.tooLarge) {
+            renderErrorPage(`JSON 过大（约 ${formatByteLike(parsed.length)}），为避免卡顿已跳过格式化。`);
+            return;
+        }
+        if (!parsed.ok) {
+            removeExistingHost();
+            removePreHideStyle();
+            return;
+        }
+
+        const rawLength = typeof parsed.raw === 'string' ? parsed.raw.length : trimmed.length;
+        const preferPlain = rawLength > MAX_STRUCTURED_RENDER_CHARS;
+        renderJsonPage(parsed.value, {preferPlain});
+    }, 0);
+}
+
+// 尽可能早一点避免 raw JSON 先被渲染出来（导致闪屏）
+if (window.self === window.top && isJsonContentType(document.contentType)) {
+    ensurePreHideStyle();
+}
+
+// 对于非 JSON Content-Type 但 Chrome 用单个 <pre> 展示的场景，尽早检测并预隐藏，减少闪屏
+if (window.self === window.top && !isJsonContentType(document.contentType)) {
+    const applyPreHideIfSinglePreJson = () => {
+        if (alreadyProcessed() || formattingStarted) return false;
+        if (!document.body) return false;
+        const bodyChildren = getMeaningfulBodyChildren(document.body);
+        if (bodyChildren.length !== 1) return false;
+        const only = bodyChildren[0];
+        if (only.nodeType !== Node.ELEMENT_NODE || only.tagName !== 'PRE') return false;
+
+        const text = only.textContent || '';
+        const match = text.match(/[^\s\uFEFF]/);
+        const first = match ? match[0] : '';
+        if (first !== '{' && first !== '[') return false;
+
+        ensurePreHideStyle();
+        return true;
+    };
+
+    if (!applyPreHideIfSinglePreJson()) {
+        const observer = new MutationObserver(() => {
+            if (applyPreHideIfSinglePreJson()) {
+                observer.disconnect();
+                return;
+            }
+            if (!document.body) return;
+            const bodyChildren = getMeaningfulBodyChildren(document.body);
+            if (bodyChildren.length > 1) {
+                observer.disconnect();
+                return;
+            }
+            if (bodyChildren.length === 1) {
+                const only = bodyChildren[0];
+                if (only.nodeType !== Node.ELEMENT_NODE || only.tagName !== 'PRE') {
+                    observer.disconnect();
+                }
+            }
+        });
+        observer.observe(document.documentElement, {childList: true, subtree: true});
+    }
 }
 
 if (document.readyState === 'loading') {
