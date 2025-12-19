@@ -339,6 +339,13 @@ function renderJsonPage(jsonValue, options = {}) {
         }
         pre.line-numbers { position: relative; padding-left: 3.8em; counter-reset: line; }
 
+        .indent-guides {
+            display: inline-block;
+            white-space: pre;
+            color: transparent;
+            position: relative;
+        }
+
         /* 折叠 */
         .collapse-toggle {
             display: inline-flex;
@@ -477,6 +484,37 @@ function renderJsonPage(jsonValue, options = {}) {
         return span;
     }
 
+    function createIndentSpan(level) {
+        const span = document.createElement('span');
+        span.className = 'indent-guides';
+        span.textContent = '  '.repeat(level);
+
+        if (level > 0) {
+            const images = [];
+            const positions = [];
+            const sizes = [];
+            const repeats = [];
+
+            for (let i = 1; i <= level; i++) {
+                images.push('linear-gradient(to bottom, #d7d7d7 0 3px, transparent 3px 6px)');
+                positions.push(`${(i - 1) * 2 + 1}ch 0`);
+                sizes.push('1px 6px');
+                repeats.push('repeat-y');
+            }
+
+            span.style.backgroundImage = images.join(', ');
+            span.style.backgroundPosition = positions.join(', ');
+            span.style.backgroundSize = sizes.join(', ');
+            span.style.backgroundRepeat = repeats.join(', ');
+        }
+
+        return span;
+    }
+
+    function appendIndent(parent, level) {
+        parent.appendChild(createIndentSpan(level));
+    }
+
     function newId(prefix) {
         return `${prefix}${Math.random().toString(36).slice(2, 11)}`;
     }
@@ -533,12 +571,13 @@ function renderJsonPage(jsonValue, options = {}) {
 
             fragment.appendChild(toggle);
             fragment.appendChild(document.createTextNode('[\n'));
-            fragment.appendChild(document.createTextNode(nextIndent));
+            appendIndent(fragment, level + 1);
             fragment.appendChild(content);
 
             for (let i = 0; i < value.length; i++) {
                 if (i > 0) {
-                    content.appendChild(document.createTextNode(',\n' + nextIndent));
+                    content.appendChild(document.createTextNode(',\n'));
+                    appendIndent(content, level + 1);
                 }
                 content.appendChild(renderValue(value[i], level + 1));
             }
@@ -578,13 +617,14 @@ function renderJsonPage(jsonValue, options = {}) {
 
             fragment.appendChild(toggle);
             fragment.appendChild(document.createTextNode('{\n'));
-            fragment.appendChild(document.createTextNode(nextIndent));
+            appendIndent(fragment, level + 1);
             fragment.appendChild(content);
 
             for (let i = 0; i < keys.length; i++) {
                 const key = keys[i];
                 if (i > 0) {
-                    content.appendChild(document.createTextNode(',\n' + nextIndent));
+                    content.appendChild(document.createTextNode(',\n'));
+                    appendIndent(content, level + 1);
                 }
                 content.appendChild(createTokenSpan('key', JSON.stringify(key)));
                 content.appendChild(document.createTextNode(': '));
