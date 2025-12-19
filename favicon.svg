@@ -1,0 +1,42 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#f8f8f8"/>
+  
+  <!-- JSON formatting icon - simplified design -->
+  <g transform="translate(4, 4)" fill="none" stroke="#333" stroke-width="1.5">
+    <!-- Left brace -->
+    <path d="M4 4 L4 24"/>
+    <line x1="4" y1="4" x2="2" y2="4"/>
+    <line x1="4" y1="8" x2="2" y2="8"/>
+    <line x1="4" y1="12" x2="2" y2="12"/>
+    <line x1="4" y1="16" x2="2" y2="16"/>
+    <line x1="4" y1="20" x2="2" y2="20"/>
+    <line x1="4" y1="24" x2="2" y2="24"/>
+    
+    <!-- Right brace -->
+    <path d="M20 4 L20 24"/>
+    <line x1="20" y1="4" x2="22" y2="4"/>
+    <line x1="20" y1="8" x2="22" y2="8"/>
+    <line x1="20" y1="12" x2="22" y2="12"/>
+    <line x1="20" y1="16" x2="22" y2="16"/>
+    <line x1="20" y1="20" x2="22" y2="20"/>
+    <line x1="20" y1="24" x2="22" y2="24"/>
+    
+    <!-- Simplified content representation -->
+    <circle cx="9" cy="9" r="1" fill="#a52a2a" stroke="none"/>
+    <line x1="11" y1="9" x2="13" y2="9" stroke="#333" stroke-width="1"/>
+    <circle cx="14" cy="9" r="1" fill="#0b7522" stroke="none"/>
+    
+    <circle cx="9" cy="14" r="1" fill="#a52a2a" stroke="none"/>
+    <line x1="11" y1="14" x2="13" y2="14" stroke="#333" stroke-width="1"/>
+    <text x="13" y="14.5" font-family="monospace" font-size="2.5" fill="#0000ff" stroke="none" text-anchor="middle">1</text>
+    
+    <circle cx="9" cy="19" r="1" fill="#a52a2a" stroke="none"/>
+    <line x1="11" y1="19" x2="13" y2="19" stroke="#333" stroke-width="1"/>
+    <text x="14" y="19.5" font-family="monospace" font-size="2.5" fill="#bc00bc" stroke="none" text-anchor="middle">t</text>
+  </g>
+  
+  <!-- Format indicator -->
+  <circle cx="26" cy="6" r="2.5" fill="#4CAF50"/>
+  <path d="M25.2 6 L25.8 5.4 L26.4 6 L25.8 6.6 Z" fill="white"/>
+</svg>

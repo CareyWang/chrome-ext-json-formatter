@@ -72,6 +72,21 @@ else
     exit 1
 fi
 
+# 复制 favicon 文件
+if [ -f "favicon.ico" ]; then
+    cp "favicon.ico" "$DIST_DIR/"
+    echo -e "${GREEN}✓ favicon.ico${NC}"
+else
+    echo -e "${YELLOW}⚠ favicon.ico 不存在${NC}"
+fi
+
+if [ -f "favicon.svg" ]; then
+    cp "favicon.svg" "$DIST_DIR/"
+    echo -e "${GREEN}✓ favicon.svg${NC}"
+else
+    echo -e "${YELLOW}⚠ favicon.svg 不存在${NC}"
+fi
+
 # 复制说明文档（可选但推荐）
 if [ -f "README.md" ]; then
     cp "README.md" "$DIST_DIR/"
@@ -92,7 +107,7 @@ JSON Formatter Chrome Extension
 构建脚本: build.sh
 
 包含文件:
-$(ls -la "$DIST_DIR" | grep -E '\.(js|json|md|txt)$' | awk '{print "- " $9 " (" $5 " bytes)"}')
+$(ls -la "$DIST_DIR" | grep -E '\.(js|json|md|txt|ico|svg)$' | awk '{print "- " $9 " (" $5 " bytes)"}')
 EOF
 
 echo -e "${GREEN}✓ VERSION.txt${NC}"
