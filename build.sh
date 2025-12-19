@@ -73,19 +73,22 @@ else
 fi
 
 # 复制 favicon 文件
-if [ -f "favicon.ico" ]; then
-    cp "favicon.ico" "$DIST_DIR/"
-    echo -e "${GREEN}✓ favicon.ico${NC}"
-else
-    echo -e "${YELLOW}⚠ favicon.ico 不存在${NC}"
-fi
-
 if [ -f "favicon.svg" ]; then
     cp "favicon.svg" "$DIST_DIR/"
     echo -e "${GREEN}✓ favicon.svg${NC}"
 else
     echo -e "${YELLOW}⚠ favicon.svg 不存在${NC}"
 fi
+
+favicon_files=("favicon-16.png" "favicon-32.png" "favicon-48.png" "favicon-128.png")
+for file in "${favicon_files[@]}"; do
+    if [ -f "$file" ]; then
+        cp "$file" "$DIST_DIR/"
+        echo -e "${GREEN}✓ $file${NC}"
+    else
+        echo -e "${YELLOW}⚠ $file 不存在${NC}"
+    fi
+done
 
 # 复制说明文档（可选但推荐）
 if [ -f "README.md" ]; then
@@ -107,7 +110,7 @@ JSON Formatter Chrome Extension
 构建脚本: build.sh
 
 包含文件:
-$(ls -la "$DIST_DIR" | grep -E '\.(js|json|md|txt|ico|svg)$' | awk '{print "- " $9 " (" $5 " bytes)"}')
+$(ls -la "$DIST_DIR" | grep -E '\.(js|json|md|txt|png|svg)$' | awk '{print "- " $9 " (" $5 " bytes)"}')
 EOF
 
 echo -e "${GREEN}✓ VERSION.txt${NC}"
@@ -141,7 +144,7 @@ if command -v zip >/dev/null 2>&1; then
     
     # 列出压缩包内容
     echo -e "${YELLOW}压缩包内容:${NC}"
-    unzip -l "$zip_file" | grep -E '\.(js|json|md|txt)$' | awk '{print "  " $4 " (" $1 " bytes)"}'
+    unzip -l "$zip_file" | grep -E '\.(js|json|md|txt|png|svg)$' | awk '{print "  " $4 " (" $1 " bytes)"}'
     
 else
     echo -e "${RED}✗ zip 命令未找到，请安装 zip 工具${NC}"
