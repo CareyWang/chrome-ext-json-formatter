@@ -1,0 +1,33 @@
+name: Build and Release
+
+on:
+    push:
+        branches:
+            - main
+            - master
+
+jobs:
+    build_release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build extension
+              run: bash build.sh
+            - name: Prepare release metadata
+              id: prep
+              run: |
+                  zip_path=$(ls build/*.zip | head -n 1)
+                  zip_name=$(basename "$zip_path")
+                  tag="ci-${GITHUB_RUN_NUMBER}"
+                  echo "zip_path=$zip_path" >> "$GITHUB_OUTPUT"
+                  echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
+                  echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            - name: Create release
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ steps.prep.outputs.tag }}
+                  name: ${{ steps.prep.outputs.tag }}
+                  body: Automated build for ${{ github.sha }}
+                  files: ${{ steps.prep.outputs.zip_path }}
