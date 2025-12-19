@@ -583,7 +583,9 @@ function renderJsonPage(jsonValue, options = {}) {
             }
 
             fragment.appendChild(placeholder);
-            fragment.appendChild(document.createTextNode('\n' + indent + ']'));
+            fragment.appendChild(document.createTextNode('\n'));
+            appendIndent(fragment, level);
+            fragment.appendChild(document.createTextNode(']'));
             return fragment;
         }
 
@@ -632,7 +634,9 @@ function renderJsonPage(jsonValue, options = {}) {
             }
 
             fragment.appendChild(placeholder);
-            fragment.appendChild(document.createTextNode('\n' + indent + '}'));
+            fragment.appendChild(document.createTextNode('\n'));
+            appendIndent(fragment, level);
+            fragment.appendChild(document.createTextNode('}'));
             return fragment;
         }
 
