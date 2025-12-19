@@ -14,7 +14,7 @@
 
 1. **清理**：删除之前的构建文件
 2. **复制文件**：
-   - 必需文件：`manifest.json`、`content.js`
+   - 必需文件：`manifest.json`、`content.js`、`formatter.html`、`formatter.js`、`formatter.css`
    - 文档文件：`README.md`、`USER_GUIDE.md`
    - 版本信息：`VERSION.txt`
 3. **验证**：检查必要文件是否完整
@@ -30,6 +30,9 @@ build/
 ├── json-formatter-chrome-extension-YYYYMMDD-HHMMSS/
 │   ├── manifest.json           # 扩展配置
 │   ├── content.js              # 主要脚本
+│   ├── formatter.html          # 选项页面
+│   ├── formatter.js            # 选项页面脚本
+│   ├── formatter.css           # 选项页面样式
 │   ├── README.md               # 项目说明
 │   ├── USER_GUIDE.md           # 用户指南
 │   └── VERSION.txt             # 版本信息

@@ -4,6 +4,9 @@
 
 - `manifest.json`: Chrome Extension Manifest V3 configuration (permissions, scripts, CSP).
 - `content.js`: Content script; detects raw JSON pages, renders folding/line-number UI.
+- `formatter.html`: Options page for manual JSON paste and formatting.
+- `formatter.js`: Options page script for paste-to-format functionality.
+- `formatter.css`: Styles for options page UI.
 - `test.json`: Sample JSON for manual verification.
 
 ## Build, Test, and Development Commands

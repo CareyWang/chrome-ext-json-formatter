@@ -47,6 +47,31 @@ else
     exit 1
 fi
 
+# 复制选项页面文件（必需）
+if [ -f "formatter.html" ]; then
+    cp "formatter.html" "$DIST_DIR/"
+    echo -e "${GREEN}✓ formatter.html${NC}"
+else
+    echo -e "${RED}✗ formatter.html 不存在${NC}"
+    exit 1
+fi
+
+if [ -f "formatter.js" ]; then
+    cp "formatter.js" "$DIST_DIR/"
+    echo -e "${GREEN}✓ formatter.js${NC}"
+else
+    echo -e "${RED}✗ formatter.js 不存在${NC}"
+    exit 1
+fi
+
+if [ -f "formatter.css" ]; then
+    cp "formatter.css" "$DIST_DIR/"
+    echo -e "${GREEN}✓ formatter.css${NC}"
+else
+    echo -e "${RED}✗ formatter.css 不存在${NC}"
+    exit 1
+fi
+
 # 复制说明文档（可选但推荐）
 if [ -f "README.md" ]; then
     cp "README.md" "$DIST_DIR/"
@@ -75,7 +100,7 @@ echo -e "${GREEN}✓ VERSION.txt${NC}"
 # 验证必要文件
 echo -e "${YELLOW}验证文件完整性...${NC}"
 
-required_files=("manifest.json" "content.js")
+required_files=("manifest.json" "content.js" "formatter.html" "formatter.js" "formatter.css")
 for file in "${required_files[@]}"; do
     if [ ! -f "$DIST_DIR/$file" ]; then
         echo -e "${RED}✗ 缺少必要文件: $file${NC}"
