@@ -47,6 +47,14 @@ else
     exit 1
 fi
 
+if [ -f "background.js" ]; then
+    cp "background.js" "$DIST_DIR/"
+    echo -e "${GREEN}✓ background.js${NC}"
+else
+    echo -e "${RED}✗ background.js 不存在${NC}"
+    exit 1
+fi
+
 # 复制选项页面文件（必需）
 if [ -f "formatter.html" ]; then
     cp "formatter.html" "$DIST_DIR/"
@@ -118,7 +126,7 @@ echo -e "${GREEN}✓ VERSION.txt${NC}"
 # 验证必要文件
 echo -e "${YELLOW}验证文件完整性...${NC}"
 
-required_files=("manifest.json" "content.js" "formatter.html" "formatter.js" "formatter.css")
+required_files=("manifest.json" "content.js" "background.js" "formatter.html" "formatter.js" "formatter.css")
 for file in "${required_files[@]}"; do
     if [ ! -f "$DIST_DIR/$file" ]; then
         echo -e "${RED}✗ 缺少必要文件: $file${NC}"
