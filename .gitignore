@@ -112,3 +112,5 @@ temp/
 # Local development files
 .local
 *.local
+
+big-test.json

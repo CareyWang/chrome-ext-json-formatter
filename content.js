@@ -3,6 +3,7 @@ console.log('JSON Formatter Content Script Loaded...');
 
 const MAX_JSON_CHARS = 10 * 1024 * 1024; // 10MB (按字符粗略限制，避免极大 JSON 卡死)
 const MAX_STRUCTURED_RENDER_CHARS = 800 * 1024; // 超过该大小默认用纯文本渲染，避免大量 DOM 构建卡顿
+const MAX_LINE_NUMBERS = 20000;
 
 const ROOT_ID = '__json_formatter_root__';
 const PRE_HIDE_STYLE_ID = '__json_formatter_pre_hide_style__';
@@ -69,6 +70,22 @@ function tryParseJson(text) {
     const trimmed = text.replace(/^\uFEFF/, '').trim();
     if (trimmed.length === 0) return {ok: false};
     if (trimmed.length > MAX_JSON_CHARS) return {ok: false, tooLarge: true, length: trimmed.length};
+
+    const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'));
+    if (!looksLikeJson) return {ok: false};
+
+    try {
+        return {ok: true, value: JSON.parse(trimmed), raw: trimmed};
+    } catch (error) {
+        return {ok: false, error};
+    }
+}
+
+function tryParseJsonForce(text) {
+    if (typeof text !== 'string') return {ok: false};
+    const trimmed = text.replace(/^\uFEFF/, '').trim();
+    if (trimmed.length === 0) return {ok: false};
 
     const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
         (trimmed.startsWith('[') && trimmed.endsWith(']'));
@@ -217,14 +234,17 @@ function renderLargeJsonPage(rawText) {
             font-size: 13px;
         }
         .container { padding: 0; margin: 0; }
-        pre {
+        textarea {
             margin: 0;
             padding: 14px;
             background: transparent;
             line-height: 1.55;
-            white-space: pre-wrap;
-            word-break: break-word;
-            max-height: calc(100vh - 120px);
+            white-space: pre;
+            width: 100%;
+            height: calc(100vh - 120px);
+            border: 0;
+            resize: none;
+            outline: none;
             overflow: auto;
         }
         code { font-family: inherit; }
@@ -253,19 +273,21 @@ function renderLargeJsonPage(rawText) {
 
     const warning = document.createElement('div');
     warning.className = 'warning';
-    warning.textContent = `JSON 过大（约 ${formatByteLike(rawText.length)}），已跳过格式化以避免卡顿。以下为原文内容：`;
+    warning.textContent = `JSON 过大（约 ${formatByteLike(rawText.length)}），默认仅展示原文，格式化可能会卡顿。`;
     card.appendChild(warning);
 
     const container = document.createElement('div');
     container.className = 'container';
     card.appendChild(container);
 
-    const pre = document.createElement('pre');
-    container.appendChild(pre);
+    const textarea = document.createElement('textarea');
+    textarea.id = 'json-raw-content';
+    textarea.spellcheck = false;
+    textarea.readOnly = true;
+    textarea.wrap = 'soft';
+    container.appendChild(textarea);
 
-    const code = document.createElement('code');
-    code.id = 'json-raw-content';
-    pre.appendChild(code);
+    let rawRendered = false;
 
     addButton('复制原文', () => {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
@@ -288,23 +310,39 @@ function renderLargeJsonPage(rawText) {
         }
     });
 
+    addButton('格式化（可能卡）', () => {
+        renderLoadingPage(rawText.length);
+        setTimeout(() => {
+            const parsed = tryParseJsonForce(rawText);
+            if (!parsed.ok) {
+                renderLargeJsonPage(rawText);
+                return;
+            }
+            const rawLength = typeof parsed.raw === 'string' ? parsed.raw.length : rawText.length;
+            const preferPlain = rawLength > MAX_STRUCTURED_RENDER_CHARS;
+            renderJsonPage(parsed.value, {preferPlain});
+        }, 0);
+    });
+
     addButton('全选', () => {
-        const range = document.createRange();
-        range.selectNodeContents(code);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
+        if (!rawRendered) {
+            textarea.value = rawText;
+            rawRendered = true;
+        }
+        textarea.focus();
+        textarea.select();
     });
 
     addButton('滚动到顶部', () => {
-        pre.scrollTop = 0;
+        textarea.scrollTop = 0;
     });
 
     addButton('滚动到底部', () => {
-        pre.scrollTop = pre.scrollHeight;
+        textarea.scrollTop = textarea.scrollHeight;
     });
 
-    code.textContent = rawText;
+    textarea.value = rawText;
+    rawRendered = true;
 }
 
 function removeExistingHost() {
@@ -456,6 +494,11 @@ function renderJsonPage(jsonValue, options = {}) {
         .boolean { color: #bc00bc; }
         .null { color: #bc00bc; }
         .key { color: #a52a2a; }
+        .no-highlight .string,
+        .no-highlight .number,
+        .no-highlight .boolean,
+        .no-highlight .null,
+        .no-highlight .key { color: inherit; }
 
         /* 行号 */
         .line-numbers-rows {
@@ -480,7 +523,7 @@ function renderJsonPage(jsonValue, options = {}) {
 
         .indent-guides {
             display: inline-block;
-            white-space: pre;
+            white-space: pre-wrap;
             color: transparent;
             position: relative;
         }
@@ -540,6 +583,19 @@ function renderJsonPage(jsonValue, options = {}) {
     controls.className = 'controls';
     card.appendChild(controls);
 
+    let highlightEnabled = false;
+    page.classList.add('no-highlight');
+    const highlightBtn = addButton('语法高亮：关', () => {
+        highlightEnabled = !highlightEnabled;
+        if (highlightEnabled) {
+            page.classList.remove('no-highlight');
+            highlightBtn.textContent = '语法高亮：开';
+        } else {
+            page.classList.add('no-highlight');
+            highlightBtn.textContent = '语法高亮：关';
+        }
+    });
+
     const pre = document.createElement('pre');
     pre.className = 'line-numbers json-collapsible';
     card.appendChild(pre);
@@ -551,9 +607,11 @@ function renderJsonPage(jsonValue, options = {}) {
     const toggleTargets = new WeakMap();
     let lineNumbersScheduled = false;
     let plainTextForLineNumbers = null;
+    let lineNumbersEnabled = true;
 
     function scheduleLineNumbersUpdate() {
         if (lineNumbersScheduled) return;
+        if (!lineNumbersEnabled) return;
         lineNumbersScheduled = true;
         requestAnimationFrame(() => {
             lineNumbersScheduled = false;
@@ -597,6 +655,7 @@ function renderJsonPage(jsonValue, options = {}) {
     }
 
     function updateLineNumbers() {
+        if (!lineNumbersEnabled) return;
         const existing = pre.querySelector('.line-numbers-rows');
         if (existing) existing.remove();
         addLineNumbers();
@@ -857,6 +916,10 @@ function renderJsonPage(jsonValue, options = {}) {
         const text = JSON.stringify(jsonValue, null, 2);
         plainTextForLineNumbers = text;
         code.textContent = text;
+        const lineCount = countNewlines(text) + 1;
+        if (lineCount > MAX_LINE_NUMBERS) {
+            lineNumbersEnabled = false;
+        }
         updateLineNumbers();
     }
 
@@ -868,12 +931,14 @@ function renderJsonPage(jsonValue, options = {}) {
     }
 
     if (preferPlain) {
-        const btnEnable = addButton('启用折叠（较慢）', () => {
-            addFoldButtons(copyBtn);
-            renderStructured();
-            btnEnable.remove();
-        }, copyBtn);
         renderPlainText();
+        if (!lineNumbersEnabled) {
+            addButton('启用行号（较慢）', () => {
+                lineNumbersEnabled = true;
+                plainTextForLineNumbers = code.textContent || '';
+                updateLineNumbers();
+            }, copyBtn);
+        }
     } else {
         addFoldButtons(copyBtn);
         renderStructured();
