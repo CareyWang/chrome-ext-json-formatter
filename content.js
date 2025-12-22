@@ -583,19 +583,6 @@ function renderJsonPage(jsonValue, options = {}) {
     controls.className = 'controls';
     card.appendChild(controls);
 
-    let highlightEnabled = false;
-    page.classList.add('no-highlight');
-    const highlightBtn = addButton('语法高亮：关', () => {
-        highlightEnabled = !highlightEnabled;
-        if (highlightEnabled) {
-            page.classList.remove('no-highlight');
-            highlightBtn.textContent = '语法高亮：开';
-        } else {
-            page.classList.add('no-highlight');
-            highlightBtn.textContent = '语法高亮：关';
-        }
-    });
-
     const pre = document.createElement('pre');
     pre.className = 'line-numbers json-collapsible';
     card.appendChild(pre);
@@ -931,6 +918,7 @@ function renderJsonPage(jsonValue, options = {}) {
     }
 
     if (preferPlain) {
+        page.classList.add('no-highlight');
         renderPlainText();
         if (!lineNumbersEnabled) {
             addButton('启用行号（较慢）', () => {

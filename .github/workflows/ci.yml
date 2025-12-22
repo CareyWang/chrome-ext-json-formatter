@@ -2,14 +2,33 @@ name: Build Store Zip
 
 on:
     push:
+        tags:
+            - 'v*'
         branches:
             - master
 
 jobs:
     build_store_zip:
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
         steps:
             - uses: actions/checkout@v4
+            - name: Compute zip name
+              run: |
+                  if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+                      version="${GITHUB_REF#refs/tags/}"
+                      version="${version#v}"
+                  else
+                      version=$(python3 - <<'PY'
+                      import json
+                      with open('manifest.json', 'r', encoding='utf-8') as f:
+                          data = json.load(f)
+                      print(data.get('version', '0.0.0'))
+                      PY
+                      )
+                  fi
+                  echo "ZIP_NAME=json-formatter-release-v${version}.zip" >> "$GITHUB_ENV"
             - name: Create release folder
               run: |
                   rm -rf release
@@ -18,16 +37,14 @@ jobs:
             - name: Zip release
               run: |
                   cd release
-                  version=$(python3 - <<'PY'
-                  import json
-                  with open('../manifest.json', 'r', encoding='utf-8') as f:
-                      data = json.load(f)
-                  print(data.get('version', '0.0.0'))
-                  PY
-                  )
-                  zip -r ../json-formatter-release-v${version}.zip .
+                  zip -r "../${ZIP_NAME}" .
             - name: Upload zip artifact
               uses: actions/upload-artifact@v4
               with:
                   name: json-formatter-release
-                  path: json-formatter-release-v*.zip
+                  path: ${{ env.ZIP_NAME }}
+            - name: Publish GitHub Release
+              if: startsWith(github.ref, 'refs/tags/')
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: ${{ env.ZIP_NAME }}
