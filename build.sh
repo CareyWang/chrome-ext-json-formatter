@@ -141,7 +141,16 @@ cd "$BUILD_DIR"
 echo -e "${YELLOW}创建 ZIP 压缩包...${NC}"
 
 if command -v zip >/dev/null 2>&1; then
-    zip -r "${PROJECT_NAME}-${VERSION}.zip" "${PROJECT_NAME}-${VERSION}/" >/dev/null
+    # 先将带时间戳的文件夹重命名为不带时间戳的版本
+    clean_folder_name="${PROJECT_NAME}"
+    mv "${PROJECT_NAME}-${VERSION}" "$clean_folder_name"
+    
+    # 创建带时间戳的zip文件，但包含不带时间戳的文件夹
+    zip -r "${PROJECT_NAME}-${VERSION}.zip" "$clean_folder_name/" >/dev/null
+    
+    # 将文件夹名称改回带时间戳版本（保持构建目录结构）
+    mv "$clean_folder_name" "${PROJECT_NAME}-${VERSION}"
+    
     echo -e "${GREEN}✓ ZIP 文件创建成功${NC}"
     
     # 显示文件信息
@@ -149,6 +158,7 @@ if command -v zip >/dev/null 2>&1; then
     zip_size=$(du -h "$zip_file" | cut -f1)
     echo -e "${GREEN}压缩包: $zip_file${NC}"
     echo -e "${GREEN}大小: $zip_size${NC}"
+    echo -e "${GREEN}解压后文件夹: $clean_folder_name${NC}"
     
     # 列出压缩包内容
     echo -e "${YELLOW}压缩包内容:${NC}"
@@ -166,15 +176,17 @@ cd ..
 echo -e "${GREEN}构建完成！${NC}"
 echo -e "${YELLOW}构建结果:${NC}"
 echo -e "  📦 压缩包: ${BUILD_DIR}/${PROJECT_NAME}-${VERSION}.zip"
+echo -e "  📁 解压后文件夹: ${PROJECT_NAME}/"
 echo -e "  📁 源文件: ${DIST_DIR}/"
 echo -e "  📏 总大小: $(du -sh "$DIST_DIR" | cut -f1)"
 echo -e "  🕒 构建时间: $(date '+%Y-%m-%d %H:%M:%S')"
 
 echo -e "\n${YELLOW}安装说明:${NC}"
 echo -e "1. 解压缩 ${PROJECT_NAME}-${VERSION}.zip"
-echo -e "2. 打开 Chrome 浏览器，访问 chrome://extensions/"
-echo -e "3. 启用'开发者模式'"
-echo -e "4. 点击'加载已解压的扩展程序'"
-echo -e "5. 选择解压后的文件夹"
+echo -e "2. 解压后会得到文件夹: ${PROJECT_NAME}/"
+echo -e "3. 打开 Chrome 浏览器，访问 chrome://extensions/"
+echo -e "4. 启用'开发者模式'"
+echo -e "5. 点击'加载已解压的扩展程序'"
+echo -e "6. 选择解压后的 ${PROJECT_NAME} 文件夹"
 
 echo -e "\n${GREEN}构建脚本执行完毕！${NC}"
