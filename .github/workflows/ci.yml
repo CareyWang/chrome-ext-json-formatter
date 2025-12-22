@@ -21,11 +21,11 @@ jobs:
                       version="${version#v}"
                   else
                       version=$(python3 - <<'PY'
-                      import json
-                      with open('manifest.json', 'r', encoding='utf-8') as f:
-                          data = json.load(f)
-                      print(data.get('version', '0.0.0'))
-                      PY
+import json
+with open('manifest.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+print(data.get('version', '0.0.0'))
+PY
                       )
                   fi
                   echo "ZIP_NAME=json-formatter-release-v${version}.zip" >> "$GITHUB_ENV"
