@@ -168,6 +168,145 @@ function renderErrorPage(message) {
     card.appendChild(msg);
 }
 
+function renderLargeJsonPage(rawText) {
+    clearBody();
+    setProcessedMarker();
+    removePreHideStyle();
+
+    const host = document.createElement('div');
+    host.id = ROOT_ID;
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({mode: 'open'});
+    applyShadowStyles(shadow, `
+        :host, * { box-sizing: border-box; }
+        .page { font-family: 'Monaco', 'SF Mono', 'Consolas', monospace; background: #f8f8f8; min-height: 100vh; }
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            overflow: hidden;
+            margin: 18px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+            padding: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            border-bottom: 1px solid #eee;
+        }
+        .controls button {
+            margin: 0;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            background: #f8f8f8;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .controls button:hover { background: #ededed; }
+        .warning {
+            padding: 10px;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffeaa7;
+            color: #856404;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+        }
+        .container { padding: 0; margin: 0; }
+        pre {
+            margin: 0;
+            padding: 14px;
+            background: transparent;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: calc(100vh - 120px);
+            overflow: auto;
+        }
+        code { font-family: inherit; }
+    `);
+
+    const page = document.createElement('div');
+    page.className = 'page';
+    shadow.appendChild(page);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    page.appendChild(card);
+
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+    card.appendChild(controls);
+
+    function addButton(label, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        btn.addEventListener('click', onClick);
+        controls.appendChild(btn);
+        return btn;
+    }
+
+    const warning = document.createElement('div');
+    warning.className = 'warning';
+    warning.textContent = `JSON 过大（约 ${formatByteLike(rawText.length)}），已跳过格式化以避免卡顿。以下为原文内容：`;
+    card.appendChild(warning);
+
+    const container = document.createElement('div');
+    container.className = 'container';
+    card.appendChild(container);
+
+    const pre = document.createElement('pre');
+    container.appendChild(pre);
+
+    const code = document.createElement('code');
+    code.id = 'json-raw-content';
+    pre.appendChild(code);
+
+    addButton('复制原文', () => {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(rawText).catch(() => {});
+        } else {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = rawText;
+                textarea.style.position = 'fixed';
+                textarea.style.top = '0';
+                textarea.style.left = '0';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand('copy');
+                textarea.remove();
+            } catch (_) {
+            }
+        }
+    });
+
+    addButton('全选', () => {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    });
+
+    addButton('滚动到顶部', () => {
+        pre.scrollTop = 0;
+    });
+
+    addButton('滚动到底部', () => {
+        pre.scrollTop = pre.scrollHeight;
+    });
+
+    code.textContent = rawText;
+}
+
 function removeExistingHost() {
     if (!document.body) return;
     const existing = document.getElementById(ROOT_ID);
@@ -763,7 +902,7 @@ function tryFormatIfJsonPage() {
     setTimeout(() => {
         const parsed = tryParseJson(candidate);
         if (parsed.tooLarge) {
-            renderErrorPage(`JSON 过大（约 ${formatByteLike(parsed.length)}），为避免卡顿已跳过格式化。`);
+            renderLargeJsonPage(parsed.raw || trimmed);
             return;
         }
         if (!parsed.ok) {
