@@ -1,11 +1,9 @@
-name: Build Store Zip
+name: Build Store Zip (Tag)
 
 on:
     push:
         tags:
             - 'v*'
-        branches:
-            - master
 
 jobs:
     build_store_zip:
@@ -16,19 +14,7 @@ jobs:
             - uses: actions/checkout@v4
             - name: Compute zip name
               run: |
-                  if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-                      version="${GITHUB_REF#refs/tags/}"
-                      version="${version#v}"
-                  else
-                      version=$(python3 - <<'PY'
-import json
-with open('manifest.json', 'r', encoding='utf-8') as f:
-    data = json.load(f)
-print(data.get('version', '0.0.0'))
-PY
-                      )
-                  fi
-                  echo "ZIP_NAME=json-formatter-release-v${version}.zip" >> "$GITHUB_ENV"
+                  echo "ZIP_NAME=json-formatter-release-${GITHUB_REF_NAME}.zip" >> "$GITHUB_ENV"
             - name: Create release folder
               run: |
                   rm -rf release
@@ -44,7 +30,6 @@ PY
                   name: json-formatter-release
                   path: ${{ env.ZIP_NAME }}
             - name: Publish GitHub Release
-              if: startsWith(github.ref, 'refs/tags/')
               uses: softprops/action-gh-release@v2
               with:
                   files: ${{ env.ZIP_NAME }}

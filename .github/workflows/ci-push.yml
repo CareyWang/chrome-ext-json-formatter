@@ -1,0 +1,32 @@
+name: Build Store Zip (Push)
+
+on:
+    push:
+        branches:
+            - master
+
+jobs:
+    build_store_zip:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Compute zip name
+              run: |
+                  short_sha="${GITHUB_SHA:0:7}"
+                  echo "ZIP_NAME=json-formatter-release-${short_sha}.zip" >> "$GITHUB_ENV"
+            - name: Create release folder
+              run: |
+                  rm -rf release
+                  mkdir -p release
+                  cp manifest.json background.js content.js formatter.html formatter.js formatter.css favicon.svg favicon-16.png favicon-32.png favicon-48.png favicon-128.png release/
+            - name: Zip release
+              run: |
+                  cd release
+                  zip -r "../${ZIP_NAME}" .
+            - name: Upload zip artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: json-formatter-release
+                  path: ${{ env.ZIP_NAME }}
