@@ -1,33 +1,33 @@
-name: Build and Release
+name: Build Store Zip
 
 on:
     push:
         branches:
-            - main
             - master
 
 jobs:
-    build_release:
+    build_store_zip:
         runs-on: ubuntu-latest
-        permissions:
-            contents: write
         steps:
             - uses: actions/checkout@v4
-            - name: Build extension
-              run: bash build.sh
-            - name: Prepare release metadata
-              id: prep
+            - name: Create release folder
               run: |
-                  zip_path=$(ls build/*.zip | head -n 1)
-                  zip_name=$(basename "$zip_path")
-                  tag="ci-${GITHUB_RUN_NUMBER}"
-                  echo "zip_path=$zip_path" >> "$GITHUB_OUTPUT"
-                  echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
-                  echo "tag=$tag" >> "$GITHUB_OUTPUT"
-            - name: Create release
-              uses: softprops/action-gh-release@v2
+                  rm -rf release
+                  mkdir -p release
+                  cp manifest.json background.js content.js formatter.html formatter.js formatter.css favicon.svg favicon-16.png favicon-32.png favicon-48.png favicon-128.png release/
+            - name: Zip release
+              run: |
+                  cd release
+                  version=$(python3 - <<'PY'
+                  import json
+                  with open('../manifest.json', 'r', encoding='utf-8') as f:
+                      data = json.load(f)
+                  print(data.get('version', '0.0.0'))
+                  PY
+                  )
+                  zip -r ../json-formatter-release-v${version}.zip .
+            - name: Upload zip artifact
+              uses: actions/upload-artifact@v4
               with:
-                  tag_name: ${{ steps.prep.outputs.tag }}
-                  name: ${{ steps.prep.outputs.tag }}
-                  body: Automated build for ${{ github.sha }}
-                  files: ${{ steps.prep.outputs.zip_path }}
+                  name: json-formatter-release
+                  path: json-formatter-release-v*.zip

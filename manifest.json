@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JSON Formatter",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Make JSON more readable.",
   "options_page": "formatter.html",
   "action": {
@@ -17,11 +17,12 @@
     "128": "favicon-128.png"
   },
   "host_permissions": [
-    "<all_urls>"
+    "http://*/*",
+    "https://*/*"
   ],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_start"
     }
