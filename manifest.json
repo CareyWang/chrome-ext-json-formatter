@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JSON Formatter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Make JSON more readable.",
   "options_page": "formatter.html",
   "action": {
