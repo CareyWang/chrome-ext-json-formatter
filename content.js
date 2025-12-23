@@ -4,6 +4,7 @@ console.log('JSON Formatter Content Script Loaded...');
 const MAX_JSON_CHARS = 10 * 1024 * 1024; // 10MB (按字符粗略限制，避免极大 JSON 卡死)
 const MAX_STRUCTURED_RENDER_CHARS = 800 * 1024; // 超过该大小默认用纯文本渲染，避免大量 DOM 构建卡顿
 const MAX_LINE_NUMBERS = 20000;
+const MAX_NON_JSON_CHARS = 10000;
 
 const ROOT_ID = '__json_formatter_root__';
 const PRE_HIDE_STYLE_ID = '__json_formatter_pre_hide_style__';
@@ -43,26 +44,48 @@ function getMeaningfulBodyChildren(body) {
     });
 }
 
+function getSimpleTextCandidate(bodyChildren) {
+    if (!document.body) return null;
+    if (bodyChildren.length === 0) return null;
+
+    const allText = bodyChildren.every(node => node.nodeType === Node.TEXT_NODE);
+    if (allText) {
+        return document.body.textContent;
+    }
+
+    if (bodyChildren.length !== 1) return null;
+    const only = bodyChildren[0];
+    if (only.nodeType === Node.TEXT_NODE) {
+        return only.textContent;
+    }
+    if (only.nodeType === Node.ELEMENT_NODE) {
+        const element = only;
+        if (element.tagName === 'PRE' || element.tagName === 'CODE') {
+            return element.textContent;
+        }
+        if (element.tagName === 'TEXTAREA') {
+            return element.value;
+        }
+        if (element.children.length === 0) {
+            return element.textContent;
+        }
+    }
+
+    return null;
+}
+
 function getRawJsonTextCandidate() {
     if (!document.body) return null;
 
     const bodyChildren = getMeaningfulBodyChildren(document.body);
     const contentTypeIsJson = isJsonContentType(document.contentType);
 
-    // Chrome 打开 raw JSON 往往是单个 <pre>
-    if (bodyChildren.length === 1) {
-        const only = bodyChildren[0];
-        if (only.nodeType === Node.ELEMENT_NODE && only.tagName === 'PRE') {
-            return only.textContent;
-        }
-    }
-
-    // 仅在明确是 JSON Content-Type 时才用 body.textContent，避免误判 HTML 页面
     if (contentTypeIsJson) {
-        return document.body.textContent;
+        const simpleCandidate = getSimpleTextCandidate(bodyChildren);
+        return simpleCandidate !== null ? simpleCandidate : document.body.textContent;
     }
 
-    return null;
+    return getSimpleTextCandidate(bodyChildren);
 }
 
 function tryParseJson(text) {
@@ -943,9 +966,20 @@ function tryFormatIfJsonPage() {
     if (!candidate) return;
 
     const trimmed = candidate.replace(/^\uFEFF/, '').trim();
+    const contentTypeIsJson = isJsonContentType(document.contentType);
+    if (!contentTypeIsJson && trimmed.length > MAX_NON_JSON_CHARS) return;
+
     const looksLikeJson = (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
         (trimmed.startsWith('[') && trimmed.endsWith(']'));
     if (!looksLikeJson) return;
+
+    let preParsed = null;
+    if (!contentTypeIsJson) {
+        const parsed = tryParseJson(candidate);
+        if (parsed.tooLarge) return;
+        if (!parsed.ok) return;
+        preParsed = parsed;
+    }
 
     formattingStarted = true;
     ensurePreHideStyle();
@@ -953,7 +987,7 @@ function tryFormatIfJsonPage() {
 
     // 让浏览器先绘制 loading，再做 JSON.parse / 大量 DOM 构建
     setTimeout(() => {
-        const parsed = tryParseJson(candidate);
+        const parsed = preParsed || tryParseJson(candidate);
         if (parsed.tooLarge) {
             renderLargeJsonPage(parsed.raw || trimmed);
             return;
@@ -981,11 +1015,9 @@ if (window.self === window.top && !isJsonContentType(document.contentType)) {
         if (alreadyProcessed() || formattingStarted) return false;
         if (!document.body) return false;
         const bodyChildren = getMeaningfulBodyChildren(document.body);
-        if (bodyChildren.length !== 1) return false;
-        const only = bodyChildren[0];
-        if (only.nodeType !== Node.ELEMENT_NODE || only.tagName !== 'PRE') return false;
-
-        const text = only.textContent || '';
+        const text = getSimpleTextCandidate(bodyChildren);
+        if (!text) return false;
+        if (text.length > MAX_NON_JSON_CHARS) return false;
         const match = text.match(/[^\s\uFEFF]/);
         const first = match ? match[0] : '';
         if (first !== '{' && first !== '[') return false;
