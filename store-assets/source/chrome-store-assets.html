@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JSON Formatter Chrome Store Assets</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #162033;
+            --muted: #667085;
+            --line: #d8dee8;
+            --panel: #ffffff;
+            --soft: #f3f6fa;
+            --green: #16a34a;
+            --blue: #2563eb;
+            --orange: #f97316;
+            --purple: #7c3aed;
+            --red: #dc2626;
+            --code: #101828;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #dfe6ef;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+        }
+
+        .asset-frame {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f7fafc 0%, #e9f0f7 100%);
+        }
+
+        .screenshot {
+            width: 1280px;
+            height: 800px;
+        }
+
+        .promo-small {
+            width: 440px;
+            height: 280px;
+            background: linear-gradient(135deg, #0f172a 0%, #134e4a 52%, #f97316 100%);
+        }
+
+        .promo-marquee {
+            width: 1400px;
+            height: 560px;
+            background: linear-gradient(135deg, #0f172a 0%, #164e63 47%, #f97316 100%);
+        }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 32px;
+            padding: 52px 58px;
+        }
+
+        .copy-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 22px;
+        }
+
+        .eyebrow {
+            width: max-content;
+            padding: 8px 12px;
+            border: 1px solid rgba(22, 32, 51, 0.14);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.72);
+            color: #475467;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 54px;
+            line-height: 1.03;
+            letter-spacing: 0;
+        }
+
+        .subcopy {
+            margin: 0;
+            color: #475467;
+            font-size: 24px;
+            line-height: 1.38;
+        }
+
+        .feature-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #344054;
+            font-size: 18px;
+            font-weight: 650;
+        }
+
+        .dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex: 0 0 auto;
+        }
+
+        .browser {
+            align-self: center;
+            min-width: 0;
+            background: #ffffff;
+            border: 1px solid #ccd5e1;
+            border-radius: 14px;
+            box-shadow: 0 28px 70px rgba(28, 45, 74, 0.18);
+            overflow: hidden;
+        }
+
+        .browser-bar {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .traffic {
+            display: flex;
+            gap: 7px;
+            flex: 0 0 auto;
+        }
+
+        .traffic span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .traffic span:nth-child(1) { background: #ff5f57; }
+        .traffic span:nth-child(2) { background: #ffbd2e; }
+        .traffic span:nth-child(3) { background: #28c840; }
+
+        .address {
+            height: 28px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border: 1px solid #dde4ee;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #667085;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .product {
+            height: 582px;
+            background: #f8f8f8;
+            padding: 18px;
+            font-family: Monaco, "SF Mono", Consolas, monospace;
+        }
+
+        .json-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #ffffff;
+            border: 1px solid #e4e7ec;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        .toolbar {
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 10px;
+            border-bottom: 1px solid #eceff3;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+
+        .button {
+            padding: 7px 10px;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: #f9fafb;
+            color: #344054;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .button.primary {
+            border-color: #a7f3d0;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .code-area {
+            position: relative;
+            flex: 1;
+            padding: 18px 22px 18px 72px;
+            overflow: hidden;
+            background: #ffffff;
+            color: var(--code);
+            font-size: 17px;
+            line-height: 1.62;
+        }
+
+        .line-rail {
+            position: absolute;
+            top: 18px;
+            left: 20px;
+            width: 34px;
+            padding-right: 12px;
+            border-right: 1px solid #e5e7eb;
+            color: #98a2b3;
+            text-align: right;
+            user-select: none;
+        }
+
+        .code {
+            white-space: pre;
+        }
+
+        .key { color: #a52a2a; }
+        .string { color: #0b7522; }
+        .number { color: #2563eb; }
+        .bool { color: #bc00bc; }
+        .null { color: #9333ea; }
+        .guide { color: #cbd5e1; }
+        .fold {
+            display: inline-flex;
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d0d5dd;
+            border-radius: 4px;
+            background: #f2f4f7;
+            color: #475467;
+            font-size: 12px;
+            font-weight: 800;
+            vertical-align: 1px;
+        }
+
+        .callout {
+            position: absolute;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #d8dee8;
+            box-shadow: 0 18px 42px rgba(28, 45, 74, 0.16);
+            font-size: 18px;
+            font-weight: 750;
+            line-height: 1.25;
+        }
+
+        .callout small {
+            display: block;
+            margin-top: 4px;
+            color: #667085;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .paste-product {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 582px;
+            background: #f8f8f8;
+            padding: 18px;
+            gap: 0;
+        }
+
+        .paste-card {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-rows: 74px 1fr;
+            overflow: hidden;
+            border: 1px solid #e4e7ec;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .paste-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 14px;
+            border-bottom: 1px solid #eceff3;
+        }
+
+        .paste-title strong {
+            display: block;
+            font-size: 18px;
+        }
+
+        .paste-title span {
+            display: block;
+            margin-top: 4px;
+            color: #667085;
+            font-size: 13px;
+        }
+
+        .paste-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .paste-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 0;
+        }
+
+        .pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            padding: 14px;
+        }
+
+        .pane + .pane {
+            border-left: 1px solid #eceff3;
+        }
+
+        .pane-title {
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 750;
+        }
+
+        .textarea,
+        .output {
+            flex: 1;
+            min-height: 0;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            padding: 13px;
+            font-family: Monaco, "SF Mono", Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: hidden;
+            white-space: pre;
+        }
+
+        .textarea {
+            color: #344054;
+            background: #ffffff;
+        }
+
+        .output {
+            color: #111827;
+            background: #fcfcfd;
+        }
+
+        .status {
+            margin-top: 8px;
+            color: #667085;
+            font-size: 12px;
+        }
+
+        .dark-code {
+            background: #101828;
+            color: #e5e7eb;
+        }
+
+        .dark-code .line-rail {
+            border-right-color: #334155;
+            color: #64748b;
+        }
+
+        .dark-code .key { color: #fca5a5; }
+        .dark-code .string { color: #86efac; }
+        .dark-code .number { color: #93c5fd; }
+        .dark-code .bool { color: #f0abfc; }
+        .dark-code .null { color: #c4b5fd; }
+        .dark-code .guide { color: #475569; }
+        .dark-code .fold {
+            background: #1f2937;
+            border-color: #475569;
+            color: #cbd5e1;
+        }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .badge {
+            padding: 9px 11px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 999px;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.11);
+            font-size: 15px;
+            font-weight: 750;
+        }
+
+        .promo-content {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 1fr 1.02fr;
+            align-items: center;
+            gap: 18px;
+            padding: 28px;
+            color: #ffffff;
+        }
+
+        .promo-small .promo-content {
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 24px;
+        }
+
+        .promo-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .logo-mark {
+            width: 72px;
+            height: 72px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.14);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.24);
+            font-family: Monaco, "SF Mono", Consolas, monospace;
+            font-size: 31px;
+            font-weight: 900;
+        }
+
+        .promo-small .logo-mark {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            font-size: 23px;
+        }
+
+        .promo-title {
+            margin: 0;
+            color: #ffffff;
+            font-size: 46px;
+            line-height: 1.04;
+            font-weight: 850;
+        }
+
+        .promo-small .promo-title {
+            font-size: 28px;
+            line-height: 1.05;
+        }
+
+        .promo-copy {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 21px;
+            line-height: 1.32;
+            font-weight: 650;
+        }
+
+        .promo-small .promo-copy {
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .mini-window {
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.72);
+            box-shadow: 0 26px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .promo-small .mini-window {
+            border-radius: 12px;
+        }
+
+        .mini-top {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0 13px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .promo-small .mini-top {
+            height: 26px;
+            padding: 0 9px;
+        }
+
+        .mini-top span {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .promo-small .mini-top span {
+            width: 6px;
+            height: 6px;
+        }
+
+        .mini-code {
+            padding: 22px;
+            font-family: Monaco, "SF Mono", Consolas, monospace;
+            font-size: 19px;
+            line-height: 1.6;
+            color: #e5e7eb;
+            white-space: pre;
+        }
+
+        .promo-small .mini-code {
+            padding: 11px 13px 13px;
+            font-size: 10px;
+            line-height: 1.55;
+        }
+
+        .mini-code .k { color: #fca5a5; }
+        .mini-code .s { color: #86efac; }
+        .mini-code .n { color: #93c5fd; }
+
+        .privacy-card {
+            position: absolute;
+            right: 92px;
+            bottom: 64px;
+            width: 270px;
+            padding: 18px;
+            border: 1px solid #bbf7d0;
+            border-radius: 16px;
+            background: #f0fdf4;
+            box-shadow: 0 22px 54px rgba(22, 101, 52, 0.16);
+        }
+
+        .privacy-card strong {
+            display: block;
+            color: #166534;
+            font-size: 22px;
+        }
+
+        .privacy-card span {
+            display: block;
+            margin-top: 6px;
+            color: #475467;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+    </style>
+</head>
+<body>
+    <section id="screenshot-1-auto-format" class="asset-frame screenshot">
+        <div class="scene">
+            <div class="copy-panel">
+                <div class="eyebrow">JSON Formatter</div>
+                <h1>Auto format raw JSON</h1>
+                <p class="subcopy">打开接口返回值，即刻变成清晰可读的结构化视图。</p>
+                <div class="feature-list">
+                    <div class="feature"><span class="dot" style="background: var(--green)"></span> 自动检测 raw JSON 页面</div>
+                    <div class="feature"><span class="dot" style="background: var(--blue)"></span> 2-space pretty print</div>
+                    <div class="feature"><span class="dot" style="background: var(--orange)"></span> 一键复制格式化结果</div>
+                </div>
+            </div>
+            <div class="browser">
+                <div class="browser-bar">
+                    <div class="traffic"><span></span><span></span><span></span></div>
+                    <div class="address">https://api.example.dev/profile.json</div>
+                </div>
+                <div class="product">
+                    <div class="json-card">
+                        <div class="toolbar">
+                            <span class="button">展开全部</span>
+                            <span class="button">折叠全部</span>
+                            <span class="button">折叠1级</span>
+                            <span class="button primary">复制JSON</span>
+                        </div>
+                        <div class="code-area">
+                            <div class="line-rail">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15</div>
+                            <div class="code"><span class="fold">-</span>{
+  <span class="key">"user"</span>: <span class="fold">-</span>{
+    <span class="key">"id"</span>: <span class="number">2048</span>,
+    <span class="key">"name"</span>: <span class="string">"Carey"</span>,
+    <span class="key">"role"</span>: <span class="string">"developer"</span>,
+    <span class="key">"active"</span>: <span class="bool">true</span>
+  },
+  <span class="key">"features"</span>: <span class="fold">-</span>[
+    <span class="string">"syntax highlight"</span>,
+    <span class="string">"line numbers"</span>,
+    <span class="string">"collapse nodes"</span>
+  ],
+  <span class="key">"updatedAt"</span>: <span class="string">"2026-05-05"</span>
+}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="callout" style="right: 106px; bottom: 104px;">格式化完成<small>Formatted instantly</small></div>
+    </section>
+
+    <section id="screenshot-2-collapse" class="asset-frame screenshot">
+        <div class="scene">
+            <div class="copy-panel">
+                <div class="eyebrow">Collapse View</div>
+                <h1>Explore complex JSON faster</h1>
+                <p class="subcopy">对象和数组支持单节点折叠，也可按 1/2/3 级快速收起。</p>
+                <div class="feature-list">
+                    <div class="feature"><span class="dot" style="background: var(--purple)"></span> Collapse all / expand all</div>
+                    <div class="feature"><span class="dot" style="background: var(--green)"></span> 保留上下文层级</div>
+                    <div class="feature"><span class="dot" style="background: var(--orange)"></span> 大 JSON 更容易定位字段</div>
+                </div>
+            </div>
+            <div class="browser">
+                <div class="browser-bar">
+                    <div class="traffic"><span></span><span></span><span></span></div>
+                    <div class="address">https://api.example.dev/orders.json</div>
+                </div>
+                <div class="product">
+                    <div class="json-card">
+                        <div class="toolbar">
+                            <span class="button">展开全部</span>
+                            <span class="button primary">折叠全部</span>
+                            <span class="button primary">折叠2级</span>
+                            <span class="button">复制JSON</span>
+                        </div>
+                        <div class="code-area">
+                            <div class="line-rail">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13</div>
+                            <div class="code"><span class="fold">-</span>{
+  <span class="key">"orders"</span>: <span class="fold">+</span>[
+    <span class="guide">... 24 项</span>
+  ],
+  <span class="key">"pagination"</span>: <span class="fold">-</span>{
+    <span class="key">"page"</span>: <span class="number">1</span>,
+    <span class="key">"pageSize"</span>: <span class="number">50</span>,
+    <span class="key">"total"</span>: <span class="number">1200</span>
+  },
+  <span class="key">"metadata"</span>: <span class="fold">+</span>{ <span class="guide">... 8 属性</span> }
+}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="callout" style="right: 126px; bottom: 118px;">折叠复杂结构<small>Collapse objects and arrays</small></div>
+    </section>
+
+    <section id="screenshot-3-line-highlight" class="asset-frame screenshot">
+        <div class="scene">
+            <div class="copy-panel">
+                <div class="eyebrow">Readable JSON</div>
+                <h1>Line numbers and syntax highlight</h1>
+                <p class="subcopy">字符串、数字、布尔值、null 和 key 分色展示，调试更省眼。</p>
+                <div class="feature-list">
+                    <div class="feature"><span class="dot" style="background: var(--blue)"></span> 行号跟随折叠自动更新</div>
+                    <div class="feature"><span class="dot" style="background: var(--green)"></span> No third-party scripts</div>
+                    <div class="feature"><span class="dot" style="background: var(--red)"></span> Shadow DOM 隔离样式</div>
+                </div>
+            </div>
+            <div class="browser">
+                <div class="browser-bar">
+                    <div class="traffic"><span></span><span></span><span></span></div>
+                    <div class="address">https://api.example.dev/config.json</div>
+                </div>
+                <div class="product">
+                    <div class="json-card">
+                        <div class="toolbar">
+                            <span class="button">切换高亮</span>
+                            <span class="button">切换行号</span>
+                            <span class="button primary">复制JSON</span>
+                        </div>
+                        <div class="code-area dark-code">
+                            <div class="line-rail">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14</div>
+                            <div class="code"><span class="fold">-</span>{
+  <span class="key">"environment"</span>: <span class="string">"production"</span>,
+  <span class="key">"retries"</span>: <span class="number">3</span>,
+  <span class="key">"cache"</span>: <span class="fold">-</span>{
+    <span class="key">"enabled"</span>: <span class="bool">true</span>,
+    <span class="key">"ttl"</span>: <span class="number">3600</span>,
+    <span class="key">"strategy"</span>: <span class="string">"stale-while-revalidate"</span>
+  },
+  <span class="key">"fallback"</span>: <span class="null">null</span>,
+  <span class="key">"regions"</span>: <span class="fold">-</span>[
+    <span class="string">"us-east"</span>,
+    <span class="string">"ap-southeast"</span>
+  ]
+}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="callout" style="right: 112px; top: 622px;">逐行阅读<small>Numbers stay aligned</small></div>
+    </section>
+
+    <section id="screenshot-4-paste-page" class="asset-frame screenshot">
+        <div class="scene">
+            <div class="copy-panel">
+                <div class="eyebrow">Paste Formatter</div>
+                <h1>Paste, format, copy</h1>
+                <p class="subcopy">选项页支持手动粘贴 JSON，右侧实时输出格式化结果。</p>
+                <div class="feature-list">
+                    <div class="feature"><span class="dot" style="background: var(--green)"></span> 实时解析与格式化</div>
+                    <div class="feature"><span class="dot" style="background: var(--blue)"></span> Format / Minify / Copy</div>
+                    <div class="feature"><span class="dot" style="background: var(--orange)"></span> 无需打开接口页面</div>
+                </div>
+            </div>
+            <div class="browser">
+                <div class="browser-bar">
+                    <div class="traffic"><span></span><span></span><span></span></div>
+                    <div class="address">chrome-extension://json-formatter/formatter.html</div>
+                </div>
+                <div class="paste-product">
+                    <div class="paste-card">
+                        <div class="paste-header">
+                            <div class="paste-title"><strong>JSON Formatter</strong><span>粘贴 JSON 字符串，右侧实时格式化显示</span></div>
+                            <div class="paste-actions">
+                                <span class="button primary">格式化</span>
+                                <span class="button">压缩</span>
+                                <span class="button">复制结果</span>
+                                <span class="button">折叠1级</span>
+                            </div>
+                        </div>
+                        <div class="paste-main">
+                            <div class="pane">
+                                <div class="pane-title">输入</div>
+                                <div class="textarea">{
+  "project": "JSON Formatter",
+  "stats": {
+    "files": 8,
+    "size": "small"
+  },
+  "features": [
+    "paste",
+    "format",
+    "copy"
+  ]
+}</div>
+                                <div class="status">已输入 102 字符</div>
+                            </div>
+                            <div class="pane">
+                                <div class="pane-title">输出</div>
+                                <div class="output"><span class="fold">-</span>{
+  <span class="key">"project"</span>: <span class="string">"JSON Formatter"</span>,
+  <span class="key">"stats"</span>: <span class="fold">-</span>{
+    <span class="key">"files"</span>: <span class="number">8</span>,
+    <span class="key">"size"</span>: <span class="string">"small"</span>
+  },
+  <span class="key">"features"</span>: <span class="fold">-</span>[
+    <span class="string">"paste"</span>,
+    <span class="string">"format"</span>,
+    <span class="string">"copy"</span>
+  ]
+}</div>
+                                <div class="status">格式化成功</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="screenshot-5-local-fast" class="asset-frame screenshot">
+        <div class="scene">
+            <div class="copy-panel">
+                <div class="eyebrow">Local First</div>
+                <h1>Fast formatting, no upload</h1>
+                <p class="subcopy">解析、渲染、复制都在浏览器本地完成；大 JSON 默认使用更轻的纯文本模式。</p>
+                <div class="feature-list">
+                    <div class="feature"><span class="dot" style="background: var(--green)"></span> 本地处理 JSON 内容</div>
+                    <div class="feature"><span class="dot" style="background: var(--orange)"></span> Large JSON fallback</div>
+                    <div class="feature"><span class="dot" style="background: var(--blue)"></span> Manifest V3 compatible</div>
+                </div>
+            </div>
+            <div class="browser">
+                <div class="browser-bar">
+                    <div class="traffic"><span></span><span></span><span></span></div>
+                    <div class="address">https://api.example.dev/large-report.json</div>
+                </div>
+                <div class="product">
+                    <div class="json-card">
+                        <div class="toolbar">
+                            <span class="button primary">复制原文</span>
+                            <span class="button">格式化（可能卡）</span>
+                            <span class="button">全选</span>
+                            <span class="button">滚动到底部</span>
+                        </div>
+                        <div style="padding: 12px; background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #9a3412; font-size: 15px;">JSON 过大，默认仅展示原文，格式化可能会卡顿。</div>
+                        <div class="code-area" style="padding-left: 26px;">
+                            <div class="code">{
+  "records": [
+    {"id": 1001, "status": "queued", "duration": 18},
+    {"id": 1002, "status": "running", "duration": 42},
+    {"id": 1003, "status": "done", "duration": 64}
+  ],
+  "summary": {"total": 20000, "source": "local preview"},
+  "privacy": "processed in browser"
+}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="privacy-card"><strong>Local processing</strong><span>不会把 JSON 内容上传到任何服务器。</span></div>
+    </section>
+
+    <section id="promo-small" class="asset-frame promo-small">
+        <div class="promo-content">
+            <div class="promo-brand">
+                <div class="logo-mark">{ }</div>
+                <h1 class="promo-title">JSON Formatter</h1>
+                <p class="promo-copy">自动格式化 / 折叠 / 行号 / 复制</p>
+            </div>
+            <div class="mini-window">
+                <div class="mini-top"><span></span><span></span><span></span></div>
+                <div class="mini-code"><span class="k">"json"</span>: <span class="s">"readable"</span>,
+<span class="k">"fold"</span>: <span class="s">"fast"</span>,
+<span class="k">"lines"</span>: <span class="n">true</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="promo-marquee" class="asset-frame promo-marquee">
+        <div class="promo-content">
+            <div class="promo-brand">
+                <div class="logo-mark">{ }</div>
+                <h1 class="promo-title">JSON Formatter<br>for Chrome</h1>
+                <p class="promo-copy">自动把 raw JSON 转为可读视图。Format, fold, highlight, copy.</p>
+                <div class="badge-row">
+                    <span class="badge">Auto format</span>
+                    <span class="badge">折叠查看</span>
+                    <span class="badge">Line numbers</span>
+                    <span class="badge">Local first</span>
+                </div>
+            </div>
+            <div class="mini-window">
+                <div class="mini-top"><span></span><span></span><span></span></div>
+                <div class="mini-code">{
+  <span class="k">"tool"</span>: <span class="s">"JSON Formatter"</span>,
+  <span class="k">"features"</span>: [
+    <span class="s">"syntax highlight"</span>,
+    <span class="s">"collapse nodes"</span>,
+    <span class="s">"copy pretty JSON"</span>
+  ],
+  <span class="k">"local"</span>: <span class="n">true</span>
+}</div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
