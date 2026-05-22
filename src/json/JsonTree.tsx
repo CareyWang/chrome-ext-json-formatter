@@ -107,33 +107,11 @@ function collectNodes(value: JsonValue, level = 0, path = 'root'): NodeMeta[] {
 }
 
 function Indent({ level }: { level: number }) {
-    const style = useMemo(() => {
-        if (level <= 0) {
-            return undefined
-        }
-
-        const images: string[] = []
-        const positions: string[] = []
-        const sizes: string[] = []
-        const repeats: string[] = []
-
-        for (let i = 1; i <= level; i++) {
-            images.push('linear-gradient(to bottom, #d7d7d7 0 3px, transparent 3px 6px)')
-            positions.push(`${(i - 1) * 2 + 1}ch 0`)
-            sizes.push('1px 6px')
-            repeats.push('repeat-y')
-        }
-
-        return {
-            backgroundImage: images.join(', '),
-            backgroundPosition: positions.join(', '),
-            backgroundSize: sizes.join(', '),
-            backgroundRepeat: repeats.join(', ')
-        }
-    }, [level])
-
     return (
-        <span className="indent-guides" style={style}>
+        <span className="indent-guides">
+            {Array.from({ length: level }, (_, i) => (
+                <span key={i} className="indent-guide" />
+            ))}
             {'  '.repeat(level)}
         </span>
     )

@@ -186,8 +186,9 @@ export default function OptionsPage() {
                                             checked={replaceEscapedQuotes}
                                             onChange={(event) => setReplaceEscapedQuotes(event.target.checked)}
                                         />
-                                        <span>
-                                            替换 <code>\"</code> 为 <code>"</code>
+                                        <span className="input-option-copy">替换转义引号</span>
+                                        <span className="input-option-code">
+                                            <code>\"</code> → <code>"</code>
                                         </span>
                                     </label>
                                 </div>

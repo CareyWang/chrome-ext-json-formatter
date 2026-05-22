@@ -110,6 +110,38 @@ export const jsonTreeStyles = `
         position: relative;
     }
 
+    .indent-guide {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background-image: linear-gradient(to bottom, #d7d7d7 0 3px, transparent 3px 6px);
+        background-size: 1px 6px;
+        background-repeat: repeat-y;
+        pointer-events: none;
+    }
+
+    .indent-guide:nth-child(1) { left: 1ch; }
+    .indent-guide:nth-child(2) { left: 3ch; }
+    .indent-guide:nth-child(3) { left: 5ch; }
+    .indent-guide:nth-child(4) { left: 7ch; }
+    .indent-guide:nth-child(5) { left: 9ch; }
+    .indent-guide:nth-child(6) { left: 11ch; }
+    .indent-guide:nth-child(7) { left: 13ch; }
+    .indent-guide:nth-child(8) { left: 15ch; }
+    .indent-guide:nth-child(9) { left: 17ch; }
+    .indent-guide:nth-child(10) { left: 19ch; }
+    .indent-guide:nth-child(11) { left: 21ch; }
+    .indent-guide:nth-child(12) { left: 23ch; }
+    .indent-guide:nth-child(13) { left: 25ch; }
+    .indent-guide:nth-child(14) { left: 27ch; }
+    .indent-guide:nth-child(15) { left: 29ch; }
+    .indent-guide:nth-child(16) { left: 31ch; }
+    .indent-guide:nth-child(17) { left: 33ch; }
+    .indent-guide:nth-child(18) { left: 35ch; }
+    .indent-guide:nth-child(19) { left: 37ch; }
+    .indent-guide:nth-child(20) { left: 39ch; }
+
     .collapse-toggle {
         display: inline-flex;
         align-items: center;

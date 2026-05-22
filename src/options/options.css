@@ -102,8 +102,11 @@ body {
 }
 
 .panel-heading {
-    display: block;
-    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
 }
 
 .panel-title {
@@ -117,24 +120,57 @@ body {
 }
 
 .input-option {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 10px;
+    min-height: 31px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f8f8f8;
     color: #555;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 12px;
     cursor: pointer;
+    transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        color 160ms ease;
+}
+
+.input-option:hover {
+    background: #ededed;
+    color: #222;
+}
+
+.input-option:focus-within {
+    border-color: #aaa;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 .input-option input {
     flex: 0 0 auto;
     margin: 0;
+    accent-color: #222;
+}
+
+.input-option-copy {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.input-option-code {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    white-space: nowrap;
 }
 
 .input-option code {
     font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
-    color: #222;
+    color: #111827;
     font-size: 11px;
 }
 
@@ -286,6 +322,38 @@ textarea {
     color: transparent;
     position: relative;
 }
+
+.json-tree .indent-guide {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-image: linear-gradient(to bottom, #d7d7d7 0 3px, transparent 3px 6px);
+    background-size: 1px 6px;
+    background-repeat: repeat-y;
+    pointer-events: none;
+}
+
+.json-tree .indent-guide:nth-child(1) { left: 1ch; }
+.json-tree .indent-guide:nth-child(2) { left: 3ch; }
+.json-tree .indent-guide:nth-child(3) { left: 5ch; }
+.json-tree .indent-guide:nth-child(4) { left: 7ch; }
+.json-tree .indent-guide:nth-child(5) { left: 9ch; }
+.json-tree .indent-guide:nth-child(6) { left: 11ch; }
+.json-tree .indent-guide:nth-child(7) { left: 13ch; }
+.json-tree .indent-guide:nth-child(8) { left: 15ch; }
+.json-tree .indent-guide:nth-child(9) { left: 17ch; }
+.json-tree .indent-guide:nth-child(10) { left: 19ch; }
+.json-tree .indent-guide:nth-child(11) { left: 21ch; }
+.json-tree .indent-guide:nth-child(12) { left: 23ch; }
+.json-tree .indent-guide:nth-child(13) { left: 25ch; }
+.json-tree .indent-guide:nth-child(14) { left: 27ch; }
+.json-tree .indent-guide:nth-child(15) { left: 29ch; }
+.json-tree .indent-guide:nth-child(16) { left: 31ch; }
+.json-tree .indent-guide:nth-child(17) { left: 33ch; }
+.json-tree .indent-guide:nth-child(18) { left: 35ch; }
+.json-tree .indent-guide:nth-child(19) { left: 37ch; }
+.json-tree .indent-guide:nth-child(20) { left: 39ch; }
 
 .json-tree .collapse-toggle {
     display: inline-flex;
