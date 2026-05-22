@@ -1,0 +1,41 @@
+{
+    "name": "json-formatter-chrome-extension",
+    "displayName": "JSON Formatter",
+    "version": "1.0.1",
+    "description": "Make JSON more readable.",
+    "author": "Carey Wang",
+    "license": "MIT",
+    "scripts": {
+        "dev": "plasmo dev",
+        "build": "plasmo build",
+        "package": "plasmo package"
+    },
+    "dependencies": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.0.306",
+        "@types/node": "^22.15.21",
+        "@types/react": "^18.3.23",
+        "@types/react-dom": "^18.3.7",
+        "plasmo": "^0.90.5",
+        "typescript": "^5.8.3"
+    },
+    "manifest": {
+        "manifest_version": 3,
+        "name": "JSON Formatter",
+        "version": "1.0.1",
+        "description": "Make JSON more readable.",
+        "action": {
+            "default_title": "JSON Formatter"
+        },
+        "host_permissions": [
+            "http://*/*",
+            "https://*/*"
+        ],
+        "content_security_policy": {
+            "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self'"
+        }
+    }
+}

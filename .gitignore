@@ -1,6 +1,7 @@
 # Chrome Extension Build Outputs
 build/
 *.zip
+.plasmo/
 
 # macOS
 .DS_Store
@@ -64,6 +65,8 @@ coverage/
 # Dependency directories
 node_modules/
 jspm_packages/
+.pnpm-store/
+*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
