@@ -1,6 +1,8 @@
 # Chrome Extension Build Outputs
 build/
 *.zip
+*.crx
+*.pem
 .plasmo/
 
 # macOS
