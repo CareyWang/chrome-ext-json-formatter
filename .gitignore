@@ -4,6 +4,7 @@ build/
 *.crx
 *.pem
 .plasmo/
+.playwright-mcp/
 
 # macOS
 .DS_Store
