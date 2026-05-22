@@ -49,14 +49,19 @@ function getFallbackOutputText(result: ParseResult, displayState: DisplayState):
 
 export default function OptionsPage() {
     const [input, setInput] = useState('')
+    const [replaceEscapedQuotes, setReplaceEscapedQuotes] = useState(false)
     const [result, setResult] = useState<ParseResult>(() => formatJson(''))
     const [displayState, setDisplayState] = useState<DisplayState>({ mode: 'tree' })
     const [copyMessage, setCopyMessage] = useState<string | null>(null)
     const treeRef = useRef<JsonTreeHandle>(null)
 
+    const normalizedInput = useMemo(() => {
+        return replaceEscapedQuotes ? input.replace(/\\"/g, '"') : input
+    }, [input, replaceEscapedQuotes])
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
-            setResult(formatJson(input))
+            setResult(formatJson(normalizedInput))
             setDisplayState({ mode: 'tree' })
             setCopyMessage(null)
         }, DEBOUNCE_DELAY)
@@ -64,9 +69,14 @@ export default function OptionsPage() {
         return () => {
             window.clearTimeout(timer)
         }
-    }, [input])
+    }, [normalizedInput])
 
-    const inputStatus = input.length === 0 ? '未输入' : `输入长度：${input.length} 字符`
+    const inputStatus =
+        input.length === 0
+            ? '未输入'
+            : replaceEscapedQuotes
+              ? `输入长度：${input.length} 字符，替换后：${normalizedInput.length} 字符`
+              : `输入长度：${input.length} 字符`
     const outputStatus = copyMessage || getOutputStatus(result, displayState)
     const outputError = result.state !== 'ok' && result.state !== 'empty'
 
@@ -79,13 +89,14 @@ export default function OptionsPage() {
     }, [displayState, result])
 
     const handleFormat = () => {
-        setResult(formatJson(input))
+        setResult(formatJson(normalizedInput))
         setDisplayState({ mode: 'tree' })
         setCopyMessage(null)
     }
 
     const clearAll = () => {
         setInput('')
+        setReplaceEscapedQuotes(false)
         setResult(formatJson(''))
         setDisplayState({ mode: 'tree' })
         setCopyMessage(null)
@@ -168,7 +179,21 @@ export default function OptionsPage() {
 
                         <main className="main">
                             <section className="panel">
-                                <div className="panel-title">输入</div>
+                                <div className="panel-heading">
+                                    <div className="panel-title">输入</div>
+                                    <label className="input-option" htmlFor="replaceEscapedQuotes">
+                                        <input
+                                            id="replaceEscapedQuotes"
+                                            type="checkbox"
+                                            checked={replaceEscapedQuotes}
+                                            onChange={(event) => setReplaceEscapedQuotes(event.target.checked)}
+                                        />
+                                        <span className="input-option-copy">替换转义引号</span>
+                                        <span className="input-option-code">
+                                            <code>\"</code> → <code>"</code>
+                                        </span>
+                                    </label>
+                                </div>
                                 <textarea
                                     id="input"
                                     spellCheck={false}
@@ -183,14 +208,13 @@ export default function OptionsPage() {
 
                             <section className="panel">
                                 <div className="panel-title">输出</div>
-                                <div id="output" className={`output${outputError ? ' error' : ''}`}>
+                                <div
+                                    id="output"
+                                    className={`output${outputError ? ' error' : ''}${
+                                        result.state === 'ok' && displayState.mode === 'tree' ? ' tree-output' : ''
+                                    }`}>
                                     {result.state === 'ok' && displayState.mode === 'tree' ? (
-                                        <JsonTree
-                                            ref={treeRef}
-                                            value={result.value}
-                                            showControls={false}
-                                            lineNumbers={false}
-                                        />
+                                        <JsonTree ref={treeRef} value={result.value} showControls={false} />
                                     ) : (
                                         <pre>{getFallbackOutputText(result, displayState)}</pre>
                                     )}

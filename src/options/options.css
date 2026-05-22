@@ -100,11 +100,111 @@ body {
     border-left: 1px solid #eee;
 }
 
+.panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    min-height: 44px;
+}
+
 .panel-title {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-weight: 600;
-    margin-bottom: 8px;
     font-size: 12px;
+}
+
+.panel > .panel-title {
+    margin-bottom: 8px;
+}
+
+.input-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 10px 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #475569;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        color 160ms ease;
+}
+
+.input-option:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #1f2937;
+}
+
+.input-option:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.input-option input {
+    position: relative;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 20px;
+    margin: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    appearance: none;
+    background: #e5e7eb;
+    cursor: pointer;
+    transition:
+        background 160ms ease,
+        border-color 160ms ease;
+}
+
+.input-option input::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.22);
+    transition: transform 160ms ease;
+}
+
+.input-option input:checked {
+    border-color: #171717;
+    background: #171717;
+}
+
+.input-option input:checked::before {
+    transform: translateX(14px);
+}
+
+.input-option-copy {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.input-option-code {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.input-option code {
+    font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
+    color: #111827;
+    font-size: 11px;
 }
 
 textarea {
@@ -135,6 +235,29 @@ textarea {
     overflow: auto;
     flex: 1;
     min-height: 0;
+}
+
+.output.tree-output {
+    padding: 0;
+    white-space: normal;
+    word-break: normal;
+}
+
+.output.tree-output .json-tree {
+    min-width: max-content;
+}
+
+.output.tree-output .json-collapsible {
+    border-top: 0;
+    padding: 16px 16px 16px 4.2em;
+    white-space: pre;
+    word-break: normal;
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+.output.tree-output .line-numbers-rows {
+    top: 16px;
 }
 
 .output > pre {
@@ -170,6 +293,12 @@ textarea {
     .header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .panel-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
     }
 
     .main {
