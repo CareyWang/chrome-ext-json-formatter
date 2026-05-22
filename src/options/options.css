@@ -335,15 +335,13 @@ textarea {
 
 .output.tree-output .json-tree .json-collapsible {
     border-top: 0;
-    padding: 16px 16px 16px 4.2em;
+    padding: 14px 14px 14px 3.8em;
     white-space: pre;
     word-break: normal;
-    font-size: 16px;
-    line-height: 1.45;
 }
 
 .output.tree-output .json-tree .line-numbers-rows {
-    top: 16px;
+    top: 14px;
 }
 
 .output > pre {
