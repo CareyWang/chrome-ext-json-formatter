@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { DEBOUNCE_DELAY } from '../json/constants'
 import { JsonTree, type JsonTreeHandle } from '../json/JsonTree'
-import { jsonTreeStyles } from '../json/jsonTreeStyles'
 import { formatJson, type ParseResult } from '../json/parse'
 import './options.css'
 
@@ -137,7 +136,6 @@ export default function OptionsPage() {
 
     return (
         <>
-            <style>{jsonTreeStyles}</style>
             <div className="page">
                 <div className="container">
                     <div className="card">
@@ -188,9 +186,8 @@ export default function OptionsPage() {
                                             checked={replaceEscapedQuotes}
                                             onChange={(event) => setReplaceEscapedQuotes(event.target.checked)}
                                         />
-                                        <span className="input-option-copy">替换转义引号</span>
-                                        <span className="input-option-code">
-                                            <code>\"</code> → <code>"</code>
+                                        <span>
+                                            替换 <code>\"</code> 为 <code>"</code>
                                         </span>
                                     </label>
                                 </div>
@@ -214,7 +211,12 @@ export default function OptionsPage() {
                                         result.state === 'ok' && displayState.mode === 'tree' ? ' tree-output' : ''
                                     }`}>
                                     {result.state === 'ok' && displayState.mode === 'tree' ? (
-                                        <JsonTree ref={treeRef} value={result.value} showControls={false} />
+                                        <JsonTree
+                                            ref={treeRef}
+                                            value={result.value}
+                                            showControls={false}
+                                            lineNumbers={true}
+                                        />
                                     ) : (
                                         <pre>{getFallbackOutputText(result, displayState)}</pre>
                                     )}

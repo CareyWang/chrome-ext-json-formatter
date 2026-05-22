@@ -101,12 +101,8 @@ body {
 }
 
 .panel-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    display: block;
     margin-bottom: 10px;
-    min-height: 44px;
 }
 
 .panel-title {
@@ -122,88 +118,22 @@ body {
 .input-option {
     display: flex;
     align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 6px 10px 6px 8px;
-    border: 1px solid #e5e7eb;
-    border-radius: 999px;
-    background: #f8fafc;
-    color: #475569;
+    gap: 6px;
+    margin-top: 10px;
+    color: #555;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     font-size: 12px;
     cursor: pointer;
-    transition:
-        background 160ms ease,
-        border-color 160ms ease,
-        box-shadow 160ms ease,
-        color 160ms ease;
-}
-
-.input-option:hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
-    color: #1f2937;
-}
-
-.input-option:focus-within {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 .input-option input {
-    position: relative;
     flex: 0 0 auto;
-    width: 34px;
-    height: 20px;
     margin: 0;
-    border: 1px solid #cbd5e1;
-    border-radius: 999px;
-    appearance: none;
-    background: #e5e7eb;
-    cursor: pointer;
-    transition:
-        background 160ms ease,
-        border-color 160ms ease;
-}
-
-.input-option input::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.22);
-    transition: transform 160ms ease;
-}
-
-.input-option input:checked {
-    border-color: #171717;
-    background: #171717;
-}
-
-.input-option input:checked::before {
-    transform: translateX(14px);
-}
-
-.input-option-copy {
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.input-option-code {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: #64748b;
-    white-space: nowrap;
 }
 
 .input-option code {
     font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
-    color: #111827;
+    color: #222;
     font-size: 11px;
 }
 
@@ -247,7 +177,160 @@ textarea {
     min-width: max-content;
 }
 
-.output.tree-output .json-collapsible {
+.json-tree .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+    padding: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+.json-tree .controls button {
+    margin: 0;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    background: #f8f8f8;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #222;
+}
+
+.json-tree .controls button:hover {
+    background: #ededed;
+}
+
+.json-tree .controls button:active {
+    transform: translateY(1px);
+}
+
+.json-tree pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: transparent;
+    padding: 14px;
+    line-height: 1.55;
+    margin: 0;
+    border-top: 1px solid #eee;
+    font-family: 'Monaco', 'SF Mono', 'Consolas', monospace;
+    font-size: 13px;
+    overflow: auto;
+}
+
+.json-tree code {
+    font-family: inherit;
+}
+
+.json-tree .string {
+    color: #0b7522;
+}
+
+.json-tree .number {
+    color: #0000ff;
+}
+
+.json-tree .boolean,
+.json-tree .null {
+    color: #bc00bc;
+}
+
+.json-tree .key {
+    color: #a52a2a;
+}
+
+.json-tree.no-highlight .string,
+.json-tree.no-highlight .number,
+.json-tree.no-highlight .boolean,
+.json-tree.no-highlight .null,
+.json-tree.no-highlight .key {
+    color: inherit;
+}
+
+.json-tree .line-numbers-rows {
+    position: absolute;
+    pointer-events: none;
+    top: 14px;
+    left: 0;
+    width: 3em;
+    letter-spacing: -1px;
+    border-right: 1px solid #e0e0e0;
+    user-select: none;
+}
+
+.json-tree .line-numbers-rows > span {
+    display: block;
+    counter-increment: line;
+}
+
+.json-tree .line-numbers-rows > span::before {
+    content: counter(line);
+    color: #9a9a9a;
+    display: block;
+    padding-right: 0.8em;
+    text-align: right;
+}
+
+.json-tree pre.line-numbers {
+    position: relative;
+    padding-left: 3.8em;
+    counter-reset: line;
+}
+
+.json-tree .indent-guides {
+    display: inline-block;
+    white-space: pre-wrap;
+    color: transparent;
+    position: relative;
+}
+
+.json-tree .collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin: 0 6px 0 0;
+    padding: 0;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    line-height: 14px;
+    background: #e9e9e9;
+    border: 1px solid #dadada;
+    border-radius: 4px;
+    color: #555;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+.json-tree .collapse-toggle:hover {
+    background: #dfdfdf;
+}
+
+.json-tree .collapse-toggle.collapsed {
+    background: #d3d3d3;
+}
+
+.json-tree .json-content {
+    display: inline;
+}
+
+.json-tree .json-content.collapsed {
+    display: none;
+}
+
+.json-tree .json-placeholder {
+    display: none;
+    color: #8a8a8a;
+    font-style: italic;
+}
+
+.json-tree .json-placeholder.show {
+    display: inline;
+}
+
+.output.tree-output .json-tree .json-collapsible {
     border-top: 0;
     padding: 16px 16px 16px 4.2em;
     white-space: pre;
@@ -256,7 +339,7 @@ textarea {
     line-height: 1.45;
 }
 
-.output.tree-output .line-numbers-rows {
+.output.tree-output .json-tree .line-numbers-rows {
     top: 16px;
 }
 
@@ -267,12 +350,6 @@ textarea {
     white-space: pre-wrap;
     word-break: break-word;
     font-family: inherit;
-    font-size: inherit;
-}
-
-.output .json-collapsible {
-    border: 0;
-    padding: 0;
     font-size: inherit;
 }
 
@@ -293,12 +370,6 @@ textarea {
     .header {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .panel-heading {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 8px;
     }
 
     .main {
