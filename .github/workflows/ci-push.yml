@@ -11,11 +11,11 @@ jobs:
         permissions:
             contents: read
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v6
               with:
                   version: latest
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v6
               with:
                   node-version: lts/*
                   cache: pnpm
@@ -32,7 +32,7 @@ jobs:
                   cd build/chrome-mv3-prod
                   zip -r "../../${ZIP_NAME}" .
             - name: Upload zip artifact
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: json-formatter-release
                   path: ${{ env.ZIP_NAME }}
